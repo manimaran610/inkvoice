@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  tamil_name: string | null;
   description: string | null;
   sku: string | null;
   unit_price: number;

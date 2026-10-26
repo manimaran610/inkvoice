@@ -333,6 +333,7 @@ products.get("/:id", requirePermission("products", "read"), (c) => {
 
 const productSchema = z.object({
   name: z.string().min(1).max(255),
+  tamil_name: z.string().max(255).optional().nullable(),
   description: z.string().max(1000).optional().or(z.literal("")),
   sku: z.string().max(50).optional().or(z.literal("")),
   unit_price: z.number().min(0),
@@ -340,6 +341,18 @@ const productSchema = z.object({
   category: z.string().max(100).optional(),
   tax_id: z.string().optional().nullable(),
   is_active: z.number().min(0).max(1).optional(),
+});
+
+const batchPriceSchema = z.object({
+  prices: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        unit_price: z.number().min(0),
+      }),
+    )
+    .min(1)
+    .max(500),
 });
 
 products.post("/", requirePermission("products", "create"), async (c) => {
@@ -373,6 +386,35 @@ products.put("/:id", requirePermission("products", "update"), async (c) => {
     metadata: { product_name: product.name },
   });
   return c.json({ success: true, data: product });
+});
+
+products.post("/batch/prices", requirePermission("products", "update"), async (c) => {
+  const body = await c.req.json();
+  const parsed = batchPriceSchema.parse(body);
+  const db = getDb();
+  const updatePrice = db.query(
+    "UPDATE products SET unit_price = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+  const errors: { id: string; reason: string }[] = [];
+  let succeeded = 0;
+
+  db.exec("BEGIN");
+  try {
+    for (const { id, unit_price } of parsed.prices) {
+      const result = updatePrice.run(unit_price, id);
+      if (result.changes > 0) {
+        succeeded++;
+      } else {
+        errors.push({ id, reason: "Product not found" });
+      }
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+
+  return c.json({ success: true, data: { succeeded, failed: errors.length, errors } });
 });
 
 products.post("/:id/reactivate", requirePermission("products", "update"), (c) => {

@@ -21,7 +21,6 @@ import {
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DateRangeFilter } from "@/components/shared/DateRangeFilter";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { type CurrentFilters, SavedFiltersMenu } from "@/components/shared/SavedFiltersMenu";
 import {
   SortableColumnHeader,
   type SortState,
@@ -261,23 +260,6 @@ export default function Invoices() {
               placeholder={t("tags.filter_placeholder")}
               ariaLabel={t("tags.filter_placeholder")}
               className="max-w-xs"
-            />
-            <SavedFiltersMenu
-              storageKey="inkvoice-saved-filters-invoices"
-              current={{
-                segment: statusFilter,
-                date_from: dateRange.from,
-                date_to: dateRange.to,
-                search: search || undefined,
-              }}
-              onApply={(preset: CurrentFilters) => {
-                setSearch(preset.search ?? "");
-                setDateRange({ from: preset.date_from, to: preset.date_to });
-                setPage(1);
-                if (preset.segment !== statusFilter) {
-                  navigate(`/invoices/${preset.segment}`);
-                }
-              }}
             />
             <DateRangeFilter
               value={dateRange}

@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { unlinkSync } from "node:fs";
-import { closeDatabase, initDatabase } from "../database/connection";
+import { closeDatabase, getDb, initDatabase } from "../database/connection";
 import { runMigrations } from "../database/migrations";
 import { seed } from "../database/seed";
 import { createCustomer } from "../services/customer.service";
 import { createInvoice, markSent } from "../services/invoice.service";
 import { recordPayment } from "../services/payment.service";
 import { buildInvoiceContext, renderInvoiceHtml } from "../services/pdf.service";
+import { createProduct } from "../services/product.service";
 import { resetEnvCache } from "../utils/env";
 
 const TEST_DB = "./data/test-pdf-payment-breakdown.db";
@@ -32,6 +33,33 @@ afterAll(() => {
 });
 
 describe("PDF payment breakdown", () => {
+  test("uses stored Tamil product names only when enabled on an invoice", () => {
+    const customer = createCustomer({ name: "Tamil product customer" });
+    const product = createProduct({
+      name: "Tomato",
+      tamil_name: "தக்காளி",
+      unit_price: 10,
+    });
+    const invoice = createInvoice({
+      customer_id: customer.id,
+      issue_date: "2026-02-01",
+      items: [
+        {
+          product_id: product.id,
+          description: product.name,
+          quantity: 1,
+          unit_price: product.unit_price,
+        },
+      ],
+    });
+
+    expect(invoice.use_tamil_product_names).toBe(1);
+    expect(buildInvoiceContext(invoice.id)?.items[0].description).toBe("தக்காளி");
+
+    getDb().run("UPDATE invoices SET use_tamil_product_names = 0 WHERE id = ?", [invoice.id]);
+    expect(buildInvoiceContext(invoice.id)?.items[0].description).toBe("Tomato");
+  });
+
   test("buildInvoiceContext exposes payments, amount paid, and balance due", () => {
     const customer = createCustomer({ name: "Acme" });
     const inv = createInvoice({

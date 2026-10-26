@@ -352,7 +352,6 @@ export default function Settings() {
           <TabsTrigger value="general">{t("settings.tab_general")}</TabsTrigger>
           <TabsTrigger value="business">{t("settings.tab_business")}</TabsTrigger>
           <TabsTrigger value="invoicing">{t("settings.tab_invoicing")}</TabsTrigger>
-          <TabsTrigger value="tax">{t("settings.tab_tax")}</TabsTrigger>
           <TabsTrigger value="email">{t("settings.tab_email")}</TabsTrigger>
           <TabsTrigger value="payments">{t("settings.tab_payments")}</TabsTrigger>
           <TabsTrigger value="reminders">{t("settings.tab_reminders")}</TabsTrigger>

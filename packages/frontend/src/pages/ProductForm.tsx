@@ -10,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
-import { Textarea } from "@/components/ui/textarea";
 import { isPositive, maxLength, required, useFormValidation } from "@/hooks/use-form-validation";
 import { useTranslation } from "@/i18n";
 import { formatApiError } from "@/lib/format-api-error";
 import { markRowHighlight } from "@/lib/highlight-row";
 import { pushRecentlyViewed } from "@/lib/recently-viewed";
+import { tamilProductName } from "@/lib/tamil-transliteration";
+
+const PRODUCT_UNITS = ["nos", "kg", "box"] as const;
 
 interface Props {
   onSave: () => void;
@@ -31,17 +33,14 @@ export default function ProductForm({ onSave }: Props) {
   // form): pre-fill the name and return to the caller on save.
   const navState = location.state as { returnTo?: string; prefillName?: string } | null;
   const [loading, setLoading] = useState(false);
-  const [taxDefs, setTaxDefs] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
   const [form, setForm] = useState({
     name: navState?.prefillName ?? "",
+    tamil_name: navState?.prefillName ? tamilProductName(navState.prefillName) : "",
     description: "",
     sku: "",
     unit_price: 0,
-    unit: "piece",
-    category: "service",
-    tax_id: "",
+    unit: "kg",
+    category: "goods",
     is_active: 1,
   });
 
@@ -50,33 +49,23 @@ export default function ProductForm({ onSave }: Props) {
       required(t("validation.required", { field: t("products.name") })),
       maxLength(t("validation.max_length", { field: t("products.name"), max: "255" }), 255),
     ],
-    description: [
-      maxLength(
-        t("validation.max_length", { field: t("products.description"), max: "1000" }),
-        1000,
-      ),
-    ],
-    sku: [maxLength(t("validation.max_length", { field: t("products.sku"), max: "50" }), 50)],
     unit_price: [
       isPositive(t("validation.must_be_positive_field", { field: t("products.unit_price") })),
     ],
   });
 
   useEffect(() => {
-    api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
-    api.listProductCategories().then((r) => setCategories(r.data));
-    api.listProductUnits().then((r) => setUnits(r.data));
     if (isEdit) {
       api.getProduct(id).then((r) => {
         const d = r.data;
         setForm({
           name: d.name || "",
+          tamil_name: d.tamil_name || tamilProductName(d.name || ""),
           description: d.description || "",
           sku: d.sku || "",
           unit_price: d.unit_price ?? 0,
-          unit: d.unit || "piece",
-          category: d.category || "service",
-          tax_id: d.tax_id || "",
+          unit: PRODUCT_UNITS.includes(d.unit) ? d.unit : "kg",
+          category: "goods",
           is_active: d.is_active ?? 1,
         });
         if (d.name) {
@@ -84,7 +73,6 @@ export default function ProductForm({ onSave }: Props) {
             type: "product",
             id: id!,
             label: d.name,
-            sublabel: d.sku ?? undefined,
           });
         }
       });
@@ -96,7 +84,7 @@ export default function ProductForm({ onSave }: Props) {
     if (!validateAll(form)) return;
     setLoading(true);
     try {
-      const data = { ...form, tax_id: form.tax_id || null };
+      const data = form;
       if (isEdit) {
         await api.updateProduct(id, data);
         toast.success(t("products.product_updated"));
@@ -115,6 +103,9 @@ export default function ProductForm({ onSave }: Props) {
 
   const setField = (field: string, value: any) => {
     const newForm = { ...form, [field]: value };
+    if (field === "name" && (!form.tamil_name || form.tamil_name === tamilProductName(form.name))) {
+      newForm.tamil_name = tamilProductName(value);
+    }
     setForm(newForm);
     onChange(field as any, newForm as any);
   };
@@ -165,25 +156,16 @@ export default function ProductForm({ onSave }: Props) {
             />
           </FormField>
 
-          <FormField label={t("products.description")} error={getError("description")}>
-            <Textarea
-              value={form.description}
-              onChange={(e) => setField("description", e.target.value)}
-              onBlur={() => onBlur("description", form)}
-              aria-invalid={!!getError("description")}
-              rows={2}
+          <FormField label={t("products.tamil_name")} hint={t("products.tamil_name_hint")}>
+            <Input
+              value={form.tamil_name}
+              onChange={(e) => setField("tamil_name", e.target.value)}
+              maxLength={255}
+              dir="auto"
             />
           </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label={t("products.sku")} error={getError("sku")}>
-              <Input
-                value={form.sku}
-                onChange={(e) => setField("sku", e.target.value)}
-                onBlur={() => onBlur("sku", form)}
-                aria-invalid={!!getError("sku")}
-              />
-            </FormField>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <FormField label={t("products.unit_price")} error={getError("unit_price")} required>
               <NumberInput
                 value={form.unit_price}
@@ -198,52 +180,15 @@ export default function ProductForm({ onSave }: Props) {
                 aria-invalid={!!getError("unit_price")}
               />
             </FormField>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">{t("products.category")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
             <FormField label={t("products.unit")}>
               <select
                 value={form.unit}
                 onChange={(e) => setField("unit", e.target.value)}
                 className="form-select"
               >
-                {units.map((u: any) => (
-                  <option key={u.id} value={u.name}>
-                    {u.symbol ? `${u.name} (${u.symbol})` : u.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label={t("products.category")}>
-              <select
-                value={form.category}
-                onChange={(e) => setField("category", e.target.value)}
-                className="form-select"
-              >
-                {categories.map((cat: any) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label={t("products.default_tax")}>
-              <select
-                value={form.tax_id}
-                onChange={(e) => setField("tax_id", e.target.value)}
-                className="form-select"
-              >
-                <option value="">{t("products.no_default_tax")}</option>
-                {taxDefs.map((td: any) => (
-                  <option key={td.id} value={td.id}>
-                    {td.name} ({td.rate}%)
+                {PRODUCT_UNITS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
                   </option>
                 ))}
               </select>

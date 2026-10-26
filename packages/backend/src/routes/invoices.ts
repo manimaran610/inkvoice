@@ -256,6 +256,7 @@ const invoiceSchema = z.object({
   cash_discount_value: z.number().min(0).optional().nullable(),
   cash_discount_days: z.number().int().min(0).max(3650).optional().nullable(),
   prices_include_tax: z.boolean().optional(),
+  use_tamil_product_names: z.boolean().optional(),
   locale: z.string().max(10).optional().nullable(),
   template_id: z.string().optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),

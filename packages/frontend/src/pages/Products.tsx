@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/api/client";
-import { BatchActionToolbar } from "@/components/shared/BatchActionToolbar";
 import {
   ColumnVisibilityMenu,
   useColumnVisibility,
@@ -18,10 +17,9 @@ import {
 } from "@/components/shared/SortableColumnHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNewEntityShortcut } from "@/hooks/use-new-entity-shortcut";
 import { useTranslation } from "@/i18n";
 import { formatApiError } from "@/lib/format-api-error";
@@ -30,21 +28,19 @@ import { isRecordId } from "@/lib/record-id";
 import { cn, formatCurrency } from "@/lib/utils";
 import ProductForm from "@/pages/ProductForm";
 
-const PRODUCT_CATEGORY_SEGMENTS = new Set(["all", "service", "goods", "subscription"]);
-
 export default function Products() {
   const { t } = useTranslation();
   const [products, setProducts] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
   });
-  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [editingPrices, setEditingPrices] = useState(false);
+  const [priceEdits, setPriceEdits] = useState<Record<string, number>>({});
   const [actionLoading, setActionLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const navigate = useNavigate();
@@ -52,23 +48,22 @@ export default function Products() {
   const { id } = useParams<{ id?: string }>();
   const isNew = location.pathname === "/products/new";
   const isForm = isNew || (!!id && isRecordId(id));
-  const category = id && PRODUCT_CATEGORY_SEGMENTS.has(id) ? id : "all";
 
   const fetchProducts = useCallback(async () => {
     const params: Record<string, string> = { page: String(page), limit: "20" };
     if (search) params.search = search;
-    if (category !== "all") params.category = category;
     const res = await api.listProducts(params);
     setProducts(res.data.items);
     setTotal(res.data.total);
-  }, [page, search, category]);
+  }, [page, search]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
   useEffect(() => {
-    setSelected(new Set());
-  }, []);
+    setPriceEdits({});
+    setEditingPrices(false);
+  }, [page, search]);
   // Reset to page 1 whenever the route segment changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: id triggers the effect intentionally
   useEffect(() => {
@@ -86,7 +81,7 @@ export default function Products() {
   }, [isForm]);
   useEffect(() => {
     if (isNew || isForm) return;
-    if (id && !PRODUCT_CATEGORY_SEGMENTS.has(id) && !isRecordId(id)) {
+    if (id && id !== "all" && !isRecordId(id)) {
       navigate("/products/all", { replace: true });
     }
   }, [id, isNew, isForm, navigate]);
@@ -95,14 +90,15 @@ export default function Products() {
 
   const productColumns = [
     { key: "name", label: t("products.name"), required: true },
-    { key: "sku", label: t("products.sku") },
     { key: "unit_price", label: t("products.unit_price") },
     { key: "unit", label: t("products.unit") },
-    { key: "category", label: t("products.category") },
     { key: "status", label: t("products.status") },
   ];
   const { isVisible: isColVisible } = useColumnVisibility("inkvoice-cols-products");
-  const visibleColCount = 1 + productColumns.filter((c) => isColVisible(c.key)).length + 1; // checkbox + actions
+  const showPriceColumn = editingPrices || isColVisible("unit_price");
+  const visibleColCount =
+    productColumns.filter((c) => (c.key === "unit_price" ? showPriceColumn : isColVisible(c.key)))
+      .length + 1;
 
   if (isForm) {
     return (
@@ -127,21 +123,8 @@ export default function Products() {
   }
 
   const sorted = sortData(products, sort);
-  const allIds = sorted.map((p: any) => p.id);
-  const allSelected = allIds.length > 0 && allIds.every((id: string) => selected.has(id));
-  const someSelected = allIds.some((id: string) => selected.has(id));
   const totalPages = Math.ceil(total / 20);
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
-  };
-  const toggleAll = () => {
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(allIds));
-  };
   const handleSort = (key: string, direction: "asc" | "desc" | null) => {
     setSort(direction ? { key, direction } : null);
   };
@@ -171,21 +154,63 @@ export default function Products() {
     }
   };
 
-  const handleBatchDelete = async () => {
+  const handleBulkPriceUpdate = async () => {
+    const prices = Object.entries(priceEdits).map(([productId, unit_price]) => ({
+      id: productId,
+      unit_price,
+    }));
+    if (prices.length === 0) return;
+
     setActionLoading(true);
     try {
-      const res = await api.batchProducts(Array.from(selected), "delete");
-      if (res.data.succeeded > 0)
-        toast.success(t("products.batch_deleted", { count: res.data.succeeded }));
-      if (res.data.failed > 0)
-        toast.error(t("products.batch_delete_failed", { count: res.data.failed }));
-      setSelected(new Set());
-      fetchProducts();
+      let succeeded = 0;
+      let failed = 0;
+      for (let offset = 0; offset < prices.length; offset += 500) {
+        const res = await api.batchProductPrices(prices.slice(offset, offset + 500));
+        succeeded += res.data.succeeded;
+        failed += res.data.failed;
+      }
+      if (succeeded > 0) toast.success(t("products.bulk_price_saved", { count: succeeded }));
+      if (failed > 0) toast.error(t("products.bulk_price_failed", { count: failed }));
+      setPriceEdits({});
+      setEditingPrices(false);
+      await fetchProducts();
     } catch (err: unknown) {
       toast.error(formatApiError(err, t));
     } finally {
       setActionLoading(false);
-      setBatchDeleteOpen(false);
+    }
+  };
+
+  const handleStartBulkPriceEdit = async () => {
+    setActionLoading(true);
+    try {
+      const params = { page: "1", limit: "100", ...(search ? { search } : {}) };
+      const firstPage = await api.listProducts(params);
+      const otherPages = await Promise.all(
+        Array.from({ length: firstPage.data.totalPages - 1 }, (_, index) =>
+          api.listProducts({ ...params, page: String(index + 2) }),
+        ),
+      );
+      const allProducts = [
+        ...firstPage.data.items,
+        ...otherPages.flatMap((response) => response.data.items),
+      ];
+      setProducts(allProducts);
+      setTotal(firstPage.data.total);
+      setPriceEdits(
+        Object.fromEntries(
+          allProducts.map((product: { id: string; unit_price: number }) => [
+            product.id,
+            product.unit_price,
+          ]),
+        ),
+      );
+      setEditingPrices(true);
+    } catch (err: unknown) {
+      toast.error(formatApiError(err, t));
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -202,7 +227,6 @@ export default function Products() {
             onClick={() => {
               const params: Record<string, string> = {};
               if (search) params.search = search;
-              if (category !== "all") params.category = category;
               window.open(api.exportCsvUrl("products", params), "_blank");
             }}
           >
@@ -219,14 +243,6 @@ export default function Products() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <Tabs value={category} onValueChange={(v) => navigate(`/products/${v}`)}>
-          <TabsList>
-            <TabsTrigger value="all">{t("products.tab_all")}</TabsTrigger>
-            <TabsTrigger value="service">{t("products.tab_service")}</TabsTrigger>
-            <TabsTrigger value="goods">{t("products.tab_goods")}</TabsTrigger>
-            <TabsTrigger value="subscription">{t("products.tab_subscription")}</TabsTrigger>
-          </TabsList>
-        </Tabs>
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -242,23 +258,49 @@ export default function Products() {
         </div>
       </div>
 
-      <BatchActionToolbar selectedCount={selected.size} onClear={() => setSelected(new Set())}>
-        <Button size="xs" variant="destructive" onClick={() => setBatchDeleteOpen(true)}>
-          {t("common.delete")}
-        </Button>
-      </BatchActionToolbar>
-
       <div className="glass-table-wrapper">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <span className="text-sm text-muted-foreground">
+            {editingPrices ? t("products.bulk_price_editing") : t("products.bulk_price_hint")}
+          </span>
+          <div className="flex items-center gap-2">
+            {!editingPrices ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStartBulkPriceEdit}
+                disabled={products.length === 0 || actionLoading}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                {actionLoading ? t("common.loading") : t("products.bulk_edit_price")}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setPriceEdits({});
+                    setEditingPrices(false);
+                    fetchProducts();
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBulkPriceUpdate}
+                  disabled={actionLoading || Object.keys(priceEdits).length === 0}
+                >
+                  {actionLoading ? t("common.saving") : t("common.save")}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         <Table stickyFirstColumn>
           <TableHeader>
             <TableRow>
-              <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={allSelected}
-                  indeterminate={someSelected && !allSelected}
-                  onCheckedChange={toggleAll}
-                />
-              </TableCell>
               {isColVisible("name") && (
                 <SortableColumnHeader
                   label={t("products.name")}
@@ -267,35 +309,20 @@ export default function Products() {
                   onSort={handleSort}
                 />
               )}
-              {isColVisible("sku") && (
-                <SortableColumnHeader
-                  label={t("products.sku")}
-                  sortKey="sku"
-                  currentSort={sort}
-                  onSort={handleSort}
-                />
-              )}
-              {isColVisible("unit_price") && (
+              {showPriceColumn && (
                 <SortableColumnHeader
                   label={t("products.unit_price")}
                   sortKey="unit_price"
                   currentSort={sort}
                   onSort={handleSort}
                   className="text-right"
+                  align="right"
                 />
               )}
               {isColVisible("unit") && (
                 <SortableColumnHeader
                   label={t("products.unit")}
                   sortKey="unit"
-                  currentSort={sort}
-                  onSort={handleSort}
-                />
-              )}
-              {isColVisible("category") && (
-                <SortableColumnHeader
-                  label={t("products.category")}
-                  sortKey="category"
                   currentSort={sort}
                   onSort={handleSort}
                 />
@@ -334,32 +361,49 @@ export default function Products() {
                   "cursor-pointer hover:bg-accent/50 transition-colors",
                   highlightId === p.id && "row-just-created",
                 )}
-                onClick={() => navigate(`/products/${p.id}`)}
+                onClick={(e) => {
+                  if (editingPrices) {
+                    e.currentTarget.querySelector<HTMLInputElement>("input")?.focus();
+                  } else {
+                    navigate(`/products/${p.id}`);
+                  }
+                }}
               >
-                <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selected.has(p.id)}
-                    onCheckedChange={() => toggleSelect(p.id)}
-                  />
-                </TableCell>
-                {isColVisible("name") && <TableCell className="font-medium">{p.name}</TableCell>}
-                {isColVisible("sku") && (
-                  <TableCell className="text-muted-foreground">{p.sku || "-"}</TableCell>
+                {isColVisible("name") && (
+                  <TableCell className="font-medium">
+                    <div>{p.name}</div>
+                    {p.tamil_name && (
+                      <div className="text-sm font-normal text-muted-foreground" dir="auto">
+                        {p.tamil_name}
+                      </div>
+                    )}
+                  </TableCell>
                 )}
-                {isColVisible("unit_price") && (
-                  <TableCell className="text-right tabular-nums font-medium">
-                    {formatCurrency(p.unit_price)}
+                {showPriceColumn && (
+                  <TableCell
+                    className="tabular-nums font-medium"
+                    onClick={editingPrices ? (e) => e.stopPropagation() : undefined}
+                  >
+                    {editingPrices ? (
+                      <div className="flex justify-end">
+                        <NumberInput
+                          aria-label={`${t("products.unit_price")} - ${p.name}`}
+                          value={priceEdits[p.id] ?? p.unit_price}
+                          min={0}
+                          decimals={2}
+                          className="w-32 text-right"
+                          onValueChange={(value) =>
+                            setPriceEdits((current) => ({ ...current, [p.id]: value }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-right">{formatCurrency(p.unit_price)}</div>
+                    )}
                   </TableCell>
                 )}
                 {isColVisible("unit") && (
                   <TableCell className="text-muted-foreground capitalize">{p.unit}</TableCell>
-                )}
-                {isColVisible("category") && (
-                  <TableCell>
-                    <Badge variant="secondary" className="capitalize">
-                      {p.category}
-                    </Badge>
-                  </TableCell>
                 )}
                 {isColVisible("status") && (
                   <TableCell>
@@ -383,6 +427,7 @@ export default function Products() {
                         size="icon"
                         aria-label={t("products.reactivate")}
                         onClick={() => handleReactivate(p.id)}
+                        disabled={editingPrices}
                       >
                         <RotateCcw className="h-4 w-4" />
                       </Button>
@@ -392,6 +437,7 @@ export default function Products() {
                       size="icon"
                       aria-label={t("common.edit")}
                       onClick={() => navigate(`/products/${p.id}`)}
+                      disabled={editingPrices}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -400,6 +446,7 @@ export default function Products() {
                       size="icon"
                       aria-label={t("common.delete")}
                       onClick={() => setDeleteConfirm({ open: true, id: p.id })}
+                      disabled={editingPrices}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -411,7 +458,7 @@ export default function Products() {
         </Table>
       </div>
 
-      {totalPages > 1 && (
+      {!editingPrices && totalPages > 1 && (
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
@@ -445,17 +492,6 @@ export default function Products() {
         confirmLabel={t("common.delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        loading={actionLoading}
-      />
-
-      <ConfirmDialog
-        open={batchDeleteOpen}
-        onOpenChange={setBatchDeleteOpen}
-        title={t("products.batch_delete_title", { count: selected.size })}
-        description={t("products.batch_delete_description")}
-        confirmLabel={t("common.delete")}
-        variant="destructive"
-        onConfirm={handleBatchDelete}
         loading={actionLoading}
       />
 

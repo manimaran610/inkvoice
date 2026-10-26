@@ -97,11 +97,12 @@ export function createProduct(data: Partial<Product>): Product {
   const id = crypto.randomBytes(16).toString("hex");
 
   db.run(
-    `INSERT INTO products (id, name, description, sku, unit_price, unit, category, tax_id, is_active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO products (id, name, tamil_name, description, sku, unit_price, unit, category, tax_id, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name!,
+      data.tamil_name || null,
       data.description || null,
       data.sku || null,
       data.unit_price ?? 0,
@@ -117,14 +118,18 @@ export function createProduct(data: Partial<Product>): Product {
 
 export function updateProduct(id: string, data: Partial<Product>): Product | null {
   const db = getDb();
-  const existing = db.query("SELECT id FROM products WHERE id = ?").get(id);
+  const existing = db.query("SELECT id, tamil_name FROM products WHERE id = ?").get(id) as {
+    id: string;
+    tamil_name: string | null;
+  } | null;
   if (!existing) return null;
 
   db.run(
-    `UPDATE products SET name = ?, description = ?, sku = ?, unit_price = ?, unit = ?,
+    `UPDATE products SET name = ?, tamil_name = ?, description = ?, sku = ?, unit_price = ?, unit = ?,
      category = ?, tax_id = ?, is_active = ?, updated_at = datetime('now') WHERE id = ?`,
     [
       data.name!,
+      data.tamil_name === undefined ? existing.tamil_name : data.tamil_name || null,
       data.description || null,
       data.sku || null,
       data.unit_price ?? 0,

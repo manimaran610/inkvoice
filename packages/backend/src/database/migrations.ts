@@ -1137,6 +1137,20 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 33,
+    name: "product_tamil_name",
+    up: (db) => {
+      addColumnIfMissing(db, "products", "tamil_name", "TEXT");
+    },
+  },
+  {
+    version: 34,
+    name: "invoice_tamil_product_names",
+    up: (db) => {
+      addColumnIfMissing(db, "invoices", "use_tamil_product_names", "INTEGER DEFAULT 0");
+    },
+  },
 ];
 
 export const LATEST_MIGRATION_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -1160,6 +1174,9 @@ function tableExists(db: Database, name: string): boolean {
 // Existing pre-versioning DBs already have all current columns; we mark every
 // known migration as applied so future boots only run new versions.
 function backfillExistingDb(db: Database): void {
+  // Pre-versioning databases skip migration handlers, so ensure this new column exists.
+  addColumnIfMissing(db, "products", "tamil_name", "TEXT");
+  addColumnIfMissing(db, "invoices", "use_tamil_product_names", "INTEGER DEFAULT 0");
   for (const m of MIGRATIONS) {
     db.run(`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`, [
       m.version,

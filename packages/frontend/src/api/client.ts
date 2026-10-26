@@ -649,6 +649,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ ids, action }),
     }),
+  batchProductPrices: (prices: { id: string; unit_price: number }[]) =>
+    request<{
+      success: boolean;
+      data: { succeeded: number; failed: number; errors: { id: string; reason: string }[] };
+    }>("/products/batch/prices", {
+      method: "POST",
+      body: JSON.stringify({ prices }),
+    }),
   batchUsers: (ids: string[], action: string) =>
     request<{
       success: boolean;

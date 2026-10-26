@@ -153,6 +153,26 @@ export function buildInvoiceContext(invoiceId: string) {
   const currency = invoice.currency || settings.currency || "INR";
   const dateFormat = settings.date_format || undefined;
   const numberFormat = settings.number_format || undefined;
+  const invoiceItems = [
+    ...invoice.items,
+    ...(invoice.consolidation?.sources.flatMap((source) => source.items) || []),
+  ];
+  const productIds = [
+    ...new Set(invoiceItems.flatMap((item) => (item.product_id ? [item.product_id] : []))),
+  ];
+  const tamilProductNames = new Map<string, string>();
+  if (invoice.use_tamil_product_names && productIds.length > 0) {
+    const rows = db
+      .query(
+        `SELECT id, tamil_name FROM products WHERE id IN (${productIds.map(() => "?").join(",")})`,
+      )
+      .all(...productIds) as { id: string; tamil_name: string | null }[];
+    for (const row of rows) {
+      if (row.tamil_name) tamilProductNames.set(row.id, row.tamil_name);
+    }
+  }
+  const itemDescription = (item: (typeof invoiceItems)[number]) =>
+    (item.product_id && tamilProductNames.get(item.product_id)) || item.description;
 
   const payments = listPayments(invoiceId);
   const amountPaid = invoice.amount_paid || 0;
@@ -196,7 +216,7 @@ export function buildInvoiceContext(invoiceId: string) {
         }
       : {},
     items: invoice.items.map((item) => ({
-      description: item.description,
+      description: itemDescription(item),
       quantity: item.quantity,
       unit: item.unit,
       unit_price: item.unit_price,
@@ -212,7 +232,7 @@ export function buildInvoiceContext(invoiceId: string) {
             invoice_number: source.invoice_number,
             issue_date: formatDateStr(source.issue_date, dateFormat, localeOverride),
             items: source.items.map((item) => ({
-              description: item.description,
+              description: itemDescription(item),
               quantity: item.quantity,
               unit: item.unit,
               unit_price: item.unit_price,

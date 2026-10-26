@@ -69,6 +69,7 @@ interface CreateInvoiceData {
   cash_discount_value?: number | null;
   cash_discount_days?: number | null;
   locale?: string | null;
+  use_tamil_product_names?: boolean;
   template_id?: string | null;
   tags?: string[];
   items: {
@@ -317,8 +318,8 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
       `INSERT INTO invoices (id, invoice_number, customer_id, status, type, reference_invoice_id,
        issue_date, due_date, subtotal, tax_total, discount_type, discount_value, discount_amount,
        cash_discount_type, cash_discount_value, cash_discount_days,
-       total, notes, payment_terms, currency, exchange_rate, locale, template_id)
-       VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       total, notes, payment_terms, currency, exchange_rate, locale, use_tamil_product_names, template_id)
+       VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         invoiceId,
         invoiceNumber,
@@ -341,6 +342,7 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
         data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
+        data.use_tamil_product_names === false ? 0 : 1,
         data.template_id || null,
       ],
     );
@@ -395,7 +397,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
   const db = getDb();
   const existing = db
     .query(
-      "SELECT id, status, cash_discount_type, cash_discount_value, cash_discount_days FROM invoices WHERE id = ?",
+      "SELECT id, status, cash_discount_type, cash_discount_value, cash_discount_days, use_tamil_product_names FROM invoices WHERE id = ?",
     )
     .get(id) as {
     id: string;
@@ -403,6 +405,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
     cash_discount_type: string | null;
     cash_discount_value: number;
     cash_discount_days: number;
+    use_tamil_product_names: number;
   } | null;
   if (!existing || existing.status !== "draft") return null;
 
@@ -436,7 +439,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
        subtotal = ?, tax_total = ?, discount_type = ?, discount_value = ?,
        discount_amount = ?, cash_discount_type = ?, cash_discount_value = ?,
        cash_discount_days = ?, total = ?, notes = ?, payment_terms = ?,
-       currency = ?, exchange_rate = ?, locale = ?, template_id = ?, updated_at = datetime('now') WHERE id = ?`,
+       currency = ?, exchange_rate = ?, locale = ?, use_tamil_product_names = ?, template_id = ?, updated_at = datetime('now') WHERE id = ?`,
       [
         data.customer_id,
         data.issue_date,
@@ -455,6 +458,11 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
         data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
+        data.use_tamil_product_names === undefined
+          ? existing.use_tamil_product_names
+          : data.use_tamil_product_names
+            ? 1
+            : 0,
         data.template_id || null,
         id,
       ],
@@ -762,6 +770,7 @@ export function duplicateInvoice(id: string): InvoiceWithItems | null {
     payment_terms: existing.payment_terms,
     currency: existing.currency,
     locale: existing.locale,
+    use_tamil_product_names: !!existing.use_tamil_product_names,
     discount_type: existing.discount_type,
     discount_value: existing.discount_value,
     template_id: existing.template_id,
@@ -995,6 +1004,7 @@ export function createCreditNote(
     notes: `Credit note for invoice ${source.invoice_number}`,
     currency: source.currency,
     locale: source.locale,
+    use_tamil_product_names: !!source.use_tamil_product_names,
     template_id: source.template_id,
     items: source.items.map((item) => ({
       product_id: item.product_id,

@@ -41,6 +41,7 @@ function nextTheme(current: Theme): Theme {
 
 export function Sidebar({ collapsed }: { collapsed?: boolean }) {
   const { user, logout } = useAuthStore();
+  const isAccountant = user?.role === "Accountant";
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -117,6 +118,17 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
         return acc;
       }, {}),
   );
+  const visibleNavSections = isAccountant
+    ? navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) =>
+            ["/", "/invoices", "/products", "/customers", "/reports"].includes(item.to),
+          ),
+        }))
+        .filter((section) => section.items.length > 0)
+    : navSections;
+  const visibleExtensionSections = isAccountant ? [] : extensionSections;
 
   return (
     <aside
@@ -129,7 +141,7 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
         {collapsed ? <InvozaIcon className="w-8 h-8" /> : <InvozaLogo className="h-9" />}
       </div>
       <nav className="flex-1 py-4 px-2 space-y-5 overflow-y-auto">
-        {[...navSections, ...extensionSections].map((section) => (
+        {[...visibleNavSections, ...visibleExtensionSections].map((section) => (
           <div key={section.label}>
             {!collapsed && (
               <p className="px-3 mb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
@@ -165,7 +177,7 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
             </div>
           </div>
         ))}
-        {user?.is_admin && (
+        {user?.is_admin && !isAccountant && (
           <div>
             {!collapsed && (
               <p className="px-3 mb-2 font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">

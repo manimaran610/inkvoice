@@ -63,11 +63,17 @@ describe("Products CRUD", () => {
   test("create product", async () => {
     const res = await authed("/api/v1/products", {
       method: "POST",
-      body: JSON.stringify({ name: "Test Service", unit_price: 99.99, category: "service" }),
+      body: JSON.stringify({
+        name: "Test Service",
+        tamil_name: "டெஸ்ட் சர்வீஸ்",
+        unit_price: 99.99,
+        category: "service",
+      }),
     });
     expect(res.status).toBe(201);
     const data = (await res.json()) as any;
     expect(data.data.name).toBe("Test Service");
+    expect(data.data.tamil_name).toBe("டெஸ்ட் சர்வீஸ்");
     productId = data.data.id;
   });
 
@@ -78,6 +84,35 @@ describe("Products CRUD", () => {
     expect(data.data.items.length).toBeGreaterThan(0);
   });
 
+  test("bulk update product prices", async () => {
+    const secondProductRes = await authed("/api/v1/products", {
+      method: "POST",
+      body: JSON.stringify({ name: "Second Test Product", unit_price: 12 }),
+    });
+    const secondProduct = (await secondProductRes.json()) as any;
+
+    const res = await authed("/api/v1/products/batch/prices", {
+      method: "POST",
+      body: JSON.stringify({
+        prices: [
+          { id: productId, unit_price: 55.5 },
+          { id: secondProduct.data.id, unit_price: 75 },
+        ],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as any;
+    expect(data.data.succeeded).toBe(2);
+    expect(data.data.failed).toBe(0);
+
+    const productRes = await authed(`/api/v1/products/${productId}`);
+    const productData = (await productRes.json()) as any;
+    expect(productData.data.unit_price).toBe(55.5);
+    const secondProductCheck = await authed(`/api/v1/products/${secondProduct.data.id}`);
+    const secondProductData = (await secondProductCheck.json()) as any;
+    expect(secondProductData.data.unit_price).toBe(75);
+  });
+
   test("update product", async () => {
     const res = await authed(`/api/v1/products/${productId}`, {
       method: "PUT",
@@ -86,6 +121,7 @@ describe("Products CRUD", () => {
     expect(res.status).toBe(200);
     const data = (await res.json()) as any;
     expect(data.data.name).toBe("Updated Service");
+    expect(data.data.tamil_name).toBe("டெஸ்ட் சர்வீஸ்");
   });
 
   test("delete product", async () => {

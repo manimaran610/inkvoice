@@ -12,6 +12,7 @@ interface SortableColumnHeaderProps {
   currentSort: SortState | null;
   onSort: (key: string, direction: "asc" | "desc" | null) => void;
   className?: string;
+  align?: "left" | "right";
 }
 
 export function SortableColumnHeader({
@@ -20,6 +21,7 @@ export function SortableColumnHeader({
   currentSort,
   onSort,
   className,
+  align = "left",
 }: SortableColumnHeaderProps) {
   const isActive = currentSort?.key === sortKey;
   const direction = isActive ? currentSort.direction : null;
@@ -42,7 +44,7 @@ export function SortableColumnHeader({
       <button
         type="button"
         onClick={handleClick}
-        className="flex items-center gap-1 w-full cursor-pointer select-none hover:text-foreground transition-colors -mx-2 px-2 -my-1 py-1 rounded"
+        className={`flex items-center gap-1 w-full cursor-pointer select-none hover:text-foreground transition-colors -mx-2 px-2 -my-1 py-1 rounded ${align === "right" ? "justify-end" : ""}`}
       >
         {label}
         {isActive && direction === "asc" && <ArrowUp className="size-3.5 text-foreground" />}

@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n";
 import { isInvoiceFormEditable } from "@/lib/constants";
@@ -149,12 +150,9 @@ function SortableLineItem({
             onChange={(e) => onUpdateItem(index, "unit", e.target.value)}
             className="form-select"
           >
-            <option value="piece">{t("invoices.unit_piece")}</option>
-            <option value="hour">{t("invoices.unit_hour")}</option>
-            <option value="day">{t("invoices.unit_day")}</option>
-            <option value="kg">{t("invoices.unit_kg")}</option>
-            <option value="meter">{t("invoices.unit_meter")}</option>
-            <option value="lump_sum">{t("invoices.unit_lump_sum")}</option>
+            <option value="nos">nos</option>
+            <option value="kg">kg</option>
+            <option value="box">box</option>
           </select>
         </div>
         <div>
@@ -267,6 +265,7 @@ export default function InvoiceForm({ onSave }: Props) {
     cash_discount_value: 0,
     cash_discount_days: 0,
     prices_include_tax: false,
+    use_tamil_product_names: true,
     tags: [] as string[],
   });
 
@@ -281,7 +280,7 @@ export default function InvoiceForm({ onSave }: Props) {
       description: "",
       quantity: 1,
       unit_price: 0,
-      unit: "piece",
+      unit: "kg",
       tax_id: "",
       tax_rate: 0,
       sort_order: 0,
@@ -417,6 +416,7 @@ export default function InvoiceForm({ onSave }: Props) {
           cash_discount_value: inv.cash_discount_value || 0,
           cash_discount_days: inv.cash_discount_days || 0,
           prices_include_tax: !!inv.prices_include_tax,
+          use_tamil_product_names: !!inv.use_tamil_product_names,
           tags: inv.tags || [],
         });
         setItems(
@@ -491,21 +491,31 @@ export default function InvoiceForm({ onSave }: Props) {
     return () => clearTimeout(timer);
   }, [form, items, isEdit, id, validate, buildPayload]);
 
-  const handleProductSelect = (index: number, productId: string) => {
-    const product = products.find((p: any) => p.id === productId);
-    if (!product) return;
-    const taxDef = taxDefs.find((t: any) => t.id === product.tax_id);
-    const newItems = [...items];
-    newItems[index] = {
-      ...newItems[index],
-      product_id: productId,
-      description: product.name,
-      unit_price: product.unit_price,
-      unit: product.unit,
-      tax_id: product.tax_id || "",
-      tax_rate: taxDef?.rate || 0,
-    };
-    setItems(newItems);
+  const handleProductSelect = async (index: number, productId: string) => {
+    const itemKey = items[index]?._key;
+    if (!itemKey) return;
+    try {
+      const { data: product } = await api.getProduct(productId);
+      setProducts((current) => [...current.filter((item: any) => item.id !== product.id), product]);
+      const taxDef = taxDefs.find((tax: any) => tax.id === product.tax_id);
+      setItems((current) =>
+        current.map((item) =>
+          item._key === itemKey
+            ? {
+                ...item,
+                product_id: productId,
+                description: product.name,
+                unit_price: product.unit_price,
+                unit: product.unit,
+                tax_id: product.tax_id || "",
+                tax_rate: taxDef?.rate || 0,
+              }
+            : item,
+        ),
+      );
+    } catch (err: unknown) {
+      toast.error(formatApiError(err, t));
+    }
   };
 
   const updateItem = (index: number, field: string, value: any) => {
@@ -528,7 +538,7 @@ export default function InvoiceForm({ onSave }: Props) {
         description: "",
         quantity: 1,
         unit_price: 0,
-        unit: "piece",
+        unit: "kg",
         tax_id: "",
         tax_rate: 0,
         sort_order: prev.length,
@@ -935,15 +945,21 @@ export default function InvoiceForm({ onSave }: Props) {
               <CardTitle className="text-sm">{t("common.total")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.prices_include_tax}
-                  onChange={(e) => setForm({ ...form, prices_include_tax: e.target.checked })}
-                  className="rounded"
+              <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                <label
+                  htmlFor="use-tamil-product-names"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {t("invoices.use_tamil_product_names")}
+                </label>
+                <Switch
+                  id="use-tamil-product-names"
+                  checked={form.use_tamil_product_names}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, use_tamil_product_names: checked })
+                  }
                 />
-                <span className="text-muted-foreground">{t("invoices.prices_include_tax")}</span>
-              </label>
+              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("invoices.subtotal")}</span>
                 <span className="tabular-nums">{formatCurrency(subtotal, form.currency)}</span>
