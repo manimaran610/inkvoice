@@ -386,12 +386,12 @@ export function getCurrencyBreakdown(params: DateRangeParams): {
   const where = `WHERE ${conditions.join(" AND ")}`;
   const raw = db
     .query(
-      `SELECT COALESCE(currency, 'USD') as currency,
+      `SELECT COALESCE(currency, 'INR') as currency,
               COUNT(*) as invoice_count,
               COALESCE(SUM(total), 0) as native_total,
               COALESCE(SUM(total * COALESCE(exchange_rate, 1)), 0) as base_total
        FROM invoices ${where}
-       GROUP BY COALESCE(currency, 'USD')
+       GROUP BY COALESCE(currency, 'INR')
        ORDER BY base_total DESC`,
     )
     .all(...queryParams) as Omit<CurrencyBreakdownRow, "exchange_rate">[];

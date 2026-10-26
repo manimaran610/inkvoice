@@ -304,7 +304,7 @@ const TEMPLATE_VARIABLES = [
       { tag: "issue_date", desc: "Formatted issue date" },
       { tag: "due_date", desc: "Formatted due date" },
       { tag: "status", desc: "Document status (draft, sent, paid, etc.)" },
-      { tag: "currency", desc: "Currency code (e.g. USD)" },
+      { tag: "currency", desc: "Currency code (INR)" },
       { tag: "is_quote", desc: "Boolean — true for quotes" },
       { tag: "document_title", desc: '"Quote" when is_quote is true' },
     ],

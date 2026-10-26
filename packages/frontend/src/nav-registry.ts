@@ -26,6 +26,8 @@ export interface NavItem {
   section?: string;
   /** Only render for admins. */
   adminOnly?: boolean;
+  /** Roles that must not see this item. */
+  hiddenForRoles?: string[];
   /** When set, the nav gate hides this item while the plugin is disabled. */
   pluginId?: string;
 }

@@ -3,11 +3,11 @@ import { getSetting } from "./settings.service";
 
 /**
  * The base currency all consolidated reporting converts to. Falls back to the
- * legacy single `currency` setting, then USD, so existing single-currency
+ * legacy single `currency` setting, then INR, so existing single-currency
  * installs keep working without configuring anything.
  */
 export function getBaseCurrency(): string {
-  return getSetting("base_currency") || getSetting("currency") || "USD";
+  return getSetting("base_currency") || getSetting("currency") || "INR";
 }
 
 /** Whether the UI should auto-fetch a rate when a foreign currency is picked. */

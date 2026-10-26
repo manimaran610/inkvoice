@@ -6,6 +6,7 @@ import { closeDatabase, initDatabase } from "../database/connection";
 import { runMigrations } from "../database/migrations";
 import { seed } from "../database/seed";
 import { crossRate, parseEcbXml } from "../services/exchange-rate.service";
+import { updateSettings } from "../services/settings.service";
 import { resetEnvCache } from "../utils/env";
 
 describe("exchange-rate math (pure, no network)", () => {
@@ -55,6 +56,7 @@ beforeAll(async () => {
   initDatabase();
   runMigrations();
   await seed();
+  updateSettings({ currency: "USD", base_currency: "USD" });
   app = createApp();
 
   const res = await app.request("/api/v1/auth/login", {

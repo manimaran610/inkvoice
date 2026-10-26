@@ -121,7 +121,7 @@ const es: TranslationKeys = {
   // Inicio de sesión
   auth: {
     welcome_back: "Bienvenido de nuevo",
-    sign_in_to: "Inicie sesión en Inkvoice",
+    sign_in_to: "Inicie sesión en Invoza",
     username: "Nombre de usuario",
     password: "Contraseña",
     sign_in: "Iniciar sesión",
@@ -955,7 +955,7 @@ const es: TranslationKeys = {
     demo_reset_confirm_body:
       "Esto borrará la base de datos actual y la volverá a poblar con contenido de demostración. No hay vuelta atrás.",
     // Asistente de configuración inicial
-    onboarding_title: "Configuremos Inkvoice",
+    onboarding_title: "Configuremos Invoza",
     onboarding_subtitle:
       "Un recorrido rápido — podrá cambiar cualquier cosa más tarde en Configuración.",
     onboarding_step: "Paso {{step}} de {{total}}",
@@ -963,10 +963,11 @@ const es: TranslationKeys = {
     onboarding_next: "Siguiente",
     onboarding_back: "Atrás",
     onboarding_finish: "Finalizar",
-    onboarding_region_title: "¿Dónde se encuentra?",
+    onboarding_region_title: "Moneda y formatos",
     onboarding_region_hint:
-      "Rellenaremos previamente su moneda, configuración regional y formato de fecha. Cambie lo que necesite abajo.",
-    onboarding_region_change_later: "Puede cambiar todo esto más tarde en Configuración → General.",
+      "Invoza usa rupias indias (INR). Elija abajo su configuración regional y formato de fecha.",
+    onboarding_region_change_later:
+      "Puede cambiar estas preferencias de formato más tarde en Configuración → General.",
     onboarding_country: "País",
     onboarding_business_title: "Datos básicos del negocio",
     onboarding_business_hint: "Aparecen en cada factura y presupuesto.",
@@ -1351,7 +1352,7 @@ const es: TranslationKeys = {
   // Signed-in devices (Settings → API, mobile app sessions)
   device_sessions: {
     title: "Dispositivos con sesión iniciada",
-    info: "Teléfonos y tabletas con sesión iniciada en la app móvil de Inkvoice con tu cuenta. Revoca un dispositivo para cerrar su sesión al instante.",
+    info: "Teléfonos y tabletas con sesión iniciada en la app móvil de Invoza con tu cuenta. Revoca un dispositivo para cerrar su sesión al instante.",
     empty: "No hay dispositivos con sesión iniciada.",
     platform_ios: "iOS",
     platform_android: "Android",
@@ -1612,7 +1613,7 @@ const es: TranslationKeys = {
     participant_status_deregistered: "Dado de baja",
     kyc_action_url: "Completar verificación en el proveedor",
     conflict_explainer:
-      "Esta empresa ya recibe documentos PEPPOL a través de otro punto de acceso. Mantenga esa configuración y use Inkvoice solo para enviar, o contacte con el titular para darse de baja y reintentar aquí. Inkvoice nunca toma el control del participante de otro punto de acceso.",
+      "Esta empresa ya recibe documentos PEPPOL a través de otro punto de acceso. Mantenga esa configuración y use Invoza solo para enviar, o contacte con el titular para darse de baja y reintentar aquí. Invoza nunca toma el control del participante de otro punto de acceso.",
     receiver_scheme: "Esquema de empresa (EAS)",
     receiver_identifier: "Identificador de empresa",
     receiver_legal_name: "Nombre legal",

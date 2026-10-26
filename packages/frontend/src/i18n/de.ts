@@ -125,7 +125,7 @@ const de: TranslationKeys = {
   // Anmeldung
   auth: {
     welcome_back: "Willkommen zurück",
-    sign_in_to: "Bei Inkvoice anmelden",
+    sign_in_to: "Bei Invoza anmelden",
     username: "Benutzername",
     password: "Passwort",
     sign_in: "Anmelden",
@@ -968,7 +968,7 @@ const de: TranslationKeys = {
     demo_reset_confirm_body:
       "Dies löscht die aktuelle Datenbank und befüllt sie neu mit Demo-Inhalten. Es gibt kein Zurück.",
     // Einrichtungsassistent
-    onboarding_title: "Richten wir Inkvoice ein",
+    onboarding_title: "Richten wir Invoza ein",
     onboarding_subtitle:
       "Ein kurzer Durchlauf — Sie können alles später in den Einstellungen ändern.",
     onboarding_step: "Schritt {{step}} von {{total}}",
@@ -976,11 +976,11 @@ const de: TranslationKeys = {
     onboarding_next: "Weiter",
     onboarding_back: "Zurück",
     onboarding_finish: "Fertigstellen",
-    onboarding_region_title: "Wo sind Sie ansässig?",
+    onboarding_region_title: "Währung und Formate",
     onboarding_region_hint:
-      "Wir füllen Währung, Gebietsschema und Datumsformat vor. Unten können Sie alles ändern.",
+      "Invoza verwendet indische Rupien (INR). Wählen Sie unten Ihr Gebietsschema und Datumsformat.",
     onboarding_region_change_later:
-      "Sie können all das später unter Einstellungen → Allgemein ändern.",
+      "Sie können diese Formateinstellungen später unter Einstellungen → Allgemein ändern.",
     onboarding_country: "Land",
     onboarding_business_title: "Unternehmensgrundlagen",
     onboarding_business_hint: "Diese Angaben erscheinen auf jeder Rechnung und jedem Angebot.",
@@ -1365,7 +1365,7 @@ const de: TranslationKeys = {
   // Signed-in devices (Settings → API, mobile app sessions)
   device_sessions: {
     title: "Angemeldete Geräte",
-    info: "Smartphones und Tablets, die mit Ihrem Konto in der Inkvoice-App angemeldet sind. Widerrufen Sie ein Gerät, um es sofort abzumelden.",
+    info: "Smartphones und Tablets, die mit Ihrem Konto in der Invoza-App angemeldet sind. Widerrufen Sie ein Gerät, um es sofort abzumelden.",
     empty: "Keine Geräte angemeldet.",
     platform_ios: "iOS",
     platform_android: "Android",
@@ -1629,7 +1629,7 @@ const de: TranslationKeys = {
     participant_status_deregistered: "Abgemeldet",
     kyc_action_url: "Verifizierung beim Anbieter abschließen",
     conflict_explainer:
-      "Dieses Unternehmen erhält bereits PEPPOL-Dokumente über einen anderen Access Point. Behalten Sie diese Einrichtung bei und nutzen Sie Inkvoice nur zum Senden, oder kontaktieren Sie den bisherigen Anbieter zur Abmeldung und versuchen Sie es hier erneut. Inkvoice übernimmt niemals den Teilnehmer eines anderen Access Points.",
+      "Dieses Unternehmen erhält bereits PEPPOL-Dokumente über einen anderen Access Point. Behalten Sie diese Einrichtung bei und nutzen Sie Invoza nur zum Senden, oder kontaktieren Sie den bisherigen Anbieter zur Abmeldung und versuchen Sie es hier erneut. Invoza übernimmt niemals den Teilnehmer eines anderen Access Points.",
     receiver_scheme: "Unternehmensschema (EAS)",
     receiver_identifier: "Unternehmenskennung",
     receiver_legal_name: "Rechtsname",

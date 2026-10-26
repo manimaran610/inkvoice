@@ -13,8 +13,7 @@ import { getDb } from "./connection";
  * done and every field the dashboard, invoice list and PDFs render is filled
  * in with a plausible business.
  *
- * Currency and locale are pinned rather than left to the defaults because the
- * demo invoices in `seedDemoData` are USD.
+ * Currency and locale are pinned rather than left to the defaults.
  */
 const DEMO_SETTINGS: Record<string, string> = {
   onboarding_completed: "true",
@@ -28,9 +27,9 @@ const DEMO_SETTINGS: Record<string, string> = {
   company_country: "US",
   company_tax_id: "88-1234567",
   company_bank_details: "Cascade Bank\nAccount: 0042 1188 0031\nSWIFT: CASCUS33",
-  currency: "USD",
-  base_currency: "USD",
-  locale: "en-US",
+  currency: "INR",
+  base_currency: "INR",
+  locale: "en-IN",
   default_notes: "Thank you for your business. Payment is due within 30 days.",
 };
 
@@ -129,8 +128,8 @@ export async function seed(): Promise<void> {
       ["company_address", ""],
       ["company_tax_id", ""],
       ["company_logo", ""],
-      ["currency", "USD"],
-      ["base_currency", "USD"],
+      ["currency", "INR"],
+      ["base_currency", "INR"],
       ["exchange_rate_auto_fetch", "false"],
       ["tax_label", "Tax"],
       ["invoice_number_pattern", "INV-{YYYY}-{SEQ4}"],
@@ -138,8 +137,8 @@ export async function seed(): Promise<void> {
       ["credit_note_number_pattern", "CN-{YYYY}-{SEQ4}"],
       ["default_payment_terms", "Net 30"],
       ["default_notes", ""],
-      ["locale", "en-US"],
-      ["date_format", "YYYY-MM-DD"],
+      ["locale", "en-IN"],
+      ["date_format", "dd/MM/yyyy"],
       ["number_format", "1,000.00"],
       ["fiscal_year_start_month", "1"],
       ["public_url", ""],
@@ -174,6 +173,7 @@ export async function seed(): Promise<void> {
     ];
     const stmt = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
     for (const [key, value] of newDefaults) stmt.run(key, value);
+    updateSettings({ currency: "INR", base_currency: "INR" });
   }
 
   // Overlay the demo company profile. Applied on every seed rather than only on
@@ -406,7 +406,7 @@ export function seedDemoData(): void {
 
       db.run(
         `INSERT INTO invoices (id, invoice_number, customer_id, status, issue_date, due_date, subtotal, total, amount_paid, currency)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'USD')`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR')`,
         [
           invoiceId,
           invoiceNumber,

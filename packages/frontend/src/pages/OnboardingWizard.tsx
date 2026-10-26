@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/i18n";
-import { detectDefaultCountry, findPresetByCountry, REGION_PRESETS } from "@/i18n/region-presets";
 import { formatApiError } from "@/lib/format-api-error";
 import { useSettingsStore } from "@/stores/settings.store";
 
@@ -27,15 +26,8 @@ export default function OnboardingWizard() {
       ? initialSettings.company_name
       : "",
   );
-  const [country, setCountry] = useState<string>(() => detectDefaultCountry());
-  const initialPreset = findPresetByCountry(country);
-  const [currency, setCurrency] = useState(
-    initialSettings.currency || initialPreset?.currency || "USD",
-  );
-  const [locale, setLocale] = useState(initialSettings.locale || initialPreset?.locale || "en-US");
-  const [dateFormat, setDateFormat] = useState(
-    initialSettings.date_format || initialPreset?.date_format || "MM/dd/yyyy",
-  );
+  const [locale, setLocale] = useState(initialSettings.locale || "en-IN");
+  const [dateFormat] = useState(initialSettings.date_format || "dd/MM/yyyy");
   const [logo, setLogo] = useState<string | null>(initialSettings.company_logo || null);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -56,9 +48,10 @@ export default function OnboardingWizard() {
     try {
       const settingsUpdate: Record<string, string> = {
         onboarding_completed: "true",
+        currency: "INR",
+        base_currency: "INR",
       };
       if (companyName) settingsUpdate.company_name = companyName;
-      if (currency) settingsUpdate.currency = currency;
       if (locale) settingsUpdate.locale = locale;
       if (dateFormat) settingsUpdate.date_format = dateFormat;
       await api.updateSettings(settingsUpdate);
@@ -83,7 +76,11 @@ export default function OnboardingWizard() {
   const skip = async () => {
     setBusy(true);
     try {
-      await api.updateSettings({ onboarding_completed: "true" });
+      await api.updateSettings({
+        onboarding_completed: "true",
+        currency: "INR",
+        base_currency: "INR",
+      });
       await fetchSettings();
       navigate("/", { replace: true });
     } catch (err: unknown) {
@@ -133,33 +130,9 @@ export default function OnboardingWizard() {
                 <p className="text-sm text-muted-foreground">
                   {t("settings.onboarding_region_hint")}
                 </p>
-                <FormField label={t("settings.onboarding_country")}>
-                  <select
-                    value={country}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setCountry(next);
-                      const preset = findPresetByCountry(next);
-                      if (preset) {
-                        setCurrency(preset.currency);
-                        setLocale(preset.locale);
-                        setDateFormat(preset.date_format);
-                      }
-                    }}
-                    className="form-select"
-                    // biome-ignore lint/a11y/noAutofocus: intentional focus on wizard step entry
-                    autoFocus
-                  >
-                    {REGION_PRESETS.map((p) => (
-                      <option key={p.country} value={p.country}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField label={t("settings.currency")}>
-                    <Input value={currency} onChange={(e) => setCurrency(e.target.value)} />
+                    <p className="flex h-9 items-center text-sm">INR — Indian Rupee (₹)</p>
                   </FormField>
                   <FormField label={t("settings.locale")}>
                     <Input

@@ -255,7 +255,7 @@ export function buildStatementData(
   if (!customer) return null;
 
   const settings = getAllSettings();
-  const currency = settings.currency || "USD";
+  const currency = settings.currency || "INR";
   const numberFormat = settings.number_format || undefined;
   const localeOverride = customer.language || settings.locale || undefined;
   const dateFormat = settings.date_format || undefined;

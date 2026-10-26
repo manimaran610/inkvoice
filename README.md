@@ -33,7 +33,7 @@ Inkvoice is a lightweight, **self-hosted** invoicing dashboard for people who'd 
 - 🗄️ **Own your data** — everything lives in a single SQLite file you control.
 - 📦 **One container, runs anywhere** — Docker, [Coolify](https://coolify.io), or [one-click on Dokploy](https://dokploy.com/templates/inkvoice); ~50–100&nbsp;MB RAM.
 - ⚡ **Modern & fast** — Bun + Hono + React, no heavyweight runtime.
-- 🌍 **Multi-currency, multi-user, multi-language** out of the box.
+- 🇮🇳 **INR-only**, with multi-user and multi-language support.
 - ☁️ **Don't want to self-host?** Use the managed **[Inkvoice Cloud](https://cloud.inkvoice.app)** and skip the ops.
 
 <div align="center">
@@ -75,7 +75,7 @@ Inkvoice is a lightweight, **self-hosted** invoicing dashboard for people who'd 
 - Register your business as a PEPPOL receiver, with conflict detection (no accidental access-point takeover)
 
 **Money & books**
-- **Multi-currency** with live exchange rates + base-currency consolidated reporting
+- **INR-only accounting** with consolidated reporting
 - **Expense tracking** — billable expenses, receipts and categories
 - Customer **account statements** (PDF per period)
 - **Reports** — tax summary, A/R aging, revenue by customer & product, profit & loss, expenses by category, currency breakdown, and cash-flow forecast — every report exports to **CSV**
@@ -209,7 +209,7 @@ docker run -d \
 
 ## Configuration
 
-Copy `.env.example` to `.env` to bootstrap a local config. Most runtime knobs (currency, locale, invoice number pattern, email templates, etc.) live on the in-app **Settings** page — environment variables are reserved for deploy-time concerns (auth, ports, secrets).
+Copy `.env.example` to `.env` to bootstrap a local config. Most runtime knobs (locale, invoice number pattern, email templates, etc.) live on the in-app **Settings** page — currency is fixed to INR, and environment variables are reserved for deploy-time concerns (auth, ports, secrets).
 
 ### Environment Variables
 

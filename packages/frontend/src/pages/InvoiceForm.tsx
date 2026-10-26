@@ -21,9 +21,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/api/client";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
-import { CurrencyCombobox } from "@/components/shared/CurrencyCombobox";
 import { CustomerCombobox } from "@/components/shared/CustomerCombobox";
-import { ExchangeRateField } from "@/components/shared/ExchangeRateField";
 import { FormField } from "@/components/shared/FormField";
 import { PaymentTermsPicker, paymentTermsToDays } from "@/components/shared/PaymentTermsPicker";
 import { ProductCombobox } from "@/components/shared/ProductCombobox";
@@ -273,7 +271,7 @@ export default function InvoiceForm({ onSave }: Props) {
     due_date: "",
     payment_terms: "",
     notes: "",
-    currency: "USD",
+    currency: "INR",
     exchange_rate: 1,
     locale: "",
     discount_type: "" as string,
@@ -286,9 +284,8 @@ export default function InvoiceForm({ onSave }: Props) {
   });
 
   const baseCurrency = useSettingsStore(
-    (s) => s.settings.base_currency || s.settings.currency || "USD",
+    (s) => s.settings.base_currency || s.settings.currency || "INR",
   );
-  const autoFetchRates = useSettingsStore((s) => s.settings.exchange_rate_auto_fetch === "true");
 
   const [items, setItems] = useState<LineItem[]>([
     {
@@ -401,7 +398,7 @@ export default function InvoiceForm({ onSave }: Props) {
                   ? addDaysIso(f.issue_date, days)
                   : f.due_date,
               notes: r.data.default_notes || "",
-              currency: r.data.currency || "USD",
+              currency: r.data.currency || "INR",
             };
           });
         });
@@ -602,33 +599,9 @@ export default function InvoiceForm({ onSave }: Props) {
   else if (form.discount_type === "amount") discountAmount = form.discount_value;
   const total = subtotal - discountAmount + taxTotal;
 
-  // Currency change resets the rate to 1 for the base currency, and (when
-  // auto-fetch is enabled) pulls a live rate for foreign currencies. The guard
-  // `f.currency === code` avoids a stale async response clobbering a newer pick.
-  const handleCurrencyChange = (code: string) => {
-    const isBase = code.toUpperCase() === baseCurrency.toUpperCase();
-    setForm((f) => ({ ...f, currency: code, exchange_rate: isBase ? 1 : f.exchange_rate }));
-    if (autoFetchRates && !isBase) {
-      api
-        .getExchangeRate(code, baseCurrency)
-        .then((res) => {
-          if (res.data.rate != null) {
-            setForm((f) =>
-              f.currency === code ? { ...f, exchange_rate: res.data.rate as number } : f,
-            );
-          }
-        })
-        .catch(() => {
-          /* offline — keep manual entry */
-        });
-    }
-  };
-
   const handleCustomerChange = (customerId: string) => {
     markTouched("customer_id");
-    const cust = customers.find((c: any) => c.id === customerId);
     setForm((f) => ({ ...f, customer_id: customerId }));
-    if (cust?.currency) handleCurrencyChange(cust.currency);
     if (customerId) {
       api.getCustomer(customerId).then((r) => {
         setAvailableCredit(Math.max(0, Number(r.data.available_credit) || 0));
@@ -917,16 +890,6 @@ export default function InvoiceForm({ onSave }: Props) {
                 }}
               />
             </FormField>
-            <FormField label={t("invoices.currency")}>
-              <CurrencyCombobox value={form.currency} onChange={handleCurrencyChange} />
-            </FormField>
-            <ExchangeRateField
-              fromCurrency={form.currency}
-              baseCurrency={baseCurrency}
-              rate={form.exchange_rate}
-              onChange={(rate) => setForm((f) => ({ ...f, exchange_rate: rate }))}
-              amount={total}
-            />
             <FormField label={t("invoices.locale")} hint={t("invoices.locale_hint")}>
               <select
                 value={form.locale}

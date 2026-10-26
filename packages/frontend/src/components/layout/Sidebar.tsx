@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { InkvoiceIcon, InkvoiceLogo } from "@/components/InkvoiceLogo";
+import { InvozaIcon, InvozaLogo } from "@/components/InvozaLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +102,7 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
     getNavItems()
       .filter((item) => {
         if (item.adminOnly && !user?.is_admin) return false;
+        if (user?.role && item.hiddenForRoles?.includes(user.role)) return false;
         if (item.pluginId && !navGate(item.pluginId)) return false;
         return true;
       })
@@ -125,7 +126,7 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
       )}
     >
       <div className="flex items-center px-4 h-14 border-b border-black/[0.10] dark:border-white/[0.08]">
-        {collapsed ? <InkvoiceIcon className="w-8 h-8" /> : <InkvoiceLogo className="h-9" />}
+        {collapsed ? <InvozaIcon className="w-8 h-8" /> : <InvozaLogo className="h-9" />}
       </div>
       <nav className="flex-1 py-4 px-2 space-y-5 overflow-y-auto">
         {[...navSections, ...extensionSections].map((section) => (

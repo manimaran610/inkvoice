@@ -4,8 +4,10 @@
 // metadata for the admin Plugins tab.
 
 import { Clock } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import { registerNavItem } from "@/nav-registry";
 import { registerRoute } from "@/route-registry";
+import { useAuthStore } from "@/stores/auth.store";
 import { PluginGuard } from "../PluginGuard";
 import { registerPlugin } from "../registry";
 import "./i18n";
@@ -13,13 +15,19 @@ import TimeTrackingPage from "./TimeTrackingPage";
 
 const PLUGIN_ID = "time-tracker";
 
-registerRoute({
-  path: "/time-tracking",
-  element: (
+function TimeTrackingRoleGuard() {
+  const role = useAuthStore((s) => s.user?.role);
+  if (role === "Accountant") return <Navigate to="/" replace />;
+  return (
     <PluginGuard pluginId={PLUGIN_ID}>
       <TimeTrackingPage />
     </PluginGuard>
-  ),
+  );
+}
+
+registerRoute({
+  path: "/time-tracking",
+  element: <TimeTrackingRoleGuard />,
   scope: "protected",
 });
 
@@ -29,6 +37,7 @@ registerNavItem({
   icon: Clock,
   section: "nav.plugins",
   pluginId: PLUGIN_ID,
+  hiddenForRoles: ["Accountant"],
 });
 
 registerPlugin({

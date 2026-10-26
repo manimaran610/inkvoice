@@ -105,7 +105,9 @@ export default function Settings() {
   const [taxLoading, setTaxLoading] = useState(false);
 
   useEffect(() => {
-    api.getSettings().then((r) => setSettings(r.data));
+    api
+      .getSettings()
+      .then((r) => setSettings({ ...r.data, currency: "INR", base_currency: "INR" }));
     api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
   }, []);
 
@@ -387,20 +389,7 @@ export default function Settings() {
               </FormField>
               <div className="grid grid-cols-2 gap-4">
                 <FormField label={t("settings.currency")}>
-                  <select
-                    value={settings.currency || "USD"}
-                    onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="TRY">TRY</option>
-                    <option value="JPY">JPY</option>
-                    <option value="CAD">CAD</option>
-                    <option value="AUD">AUD</option>
-                    <option value="CHF">CHF</option>
-                  </select>
+                  <p className="flex h-9 items-center text-sm">INR — Indian Rupee (₹)</p>
                 </FormField>
                 <FormField label={t("settings.locale")} hint={t("settings.locale_hint")}>
                   <Input
@@ -408,45 +397,6 @@ export default function Settings() {
                     onChange={set("locale")}
                     placeholder="en-US"
                   />
-                </FormField>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  label={t("settings.base_currency")}
-                  hint={t("settings.base_currency_hint")}
-                >
-                  <select
-                    value={settings.base_currency || settings.currency || "USD"}
-                    onChange={(e) => setSettings({ ...settings, base_currency: e.target.value })}
-                    className="form-select"
-                  >
-                    {["USD", "EUR", "GBP", "TRY", "JPY", "CAD", "AUD", "CHF"].map((code) => (
-                      <option key={code} value={code}>
-                        {code}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField
-                  label={t("settings.auto_fetch_rates")}
-                  hint={t("settings.auto_fetch_rates_hint")}
-                >
-                  <label className="flex items-center gap-2 h-9">
-                    <input
-                      type="checkbox"
-                      checked={settings.exchange_rate_auto_fetch === "true"}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          exchange_rate_auto_fetch: e.target.checked ? "true" : "false",
-                        })
-                      }
-                      className="rounded"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {t("settings.auto_fetch_rates_label")}
-                    </span>
-                  </label>
                 </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4">

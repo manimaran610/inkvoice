@@ -16,7 +16,7 @@ export function PublicLayout() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = `${docLabel} — Inkvoice`;
+    document.title = `${docLabel} — Invoza`;
     return () => {
       document.title = previous;
     };

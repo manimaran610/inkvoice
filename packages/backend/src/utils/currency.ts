@@ -30,7 +30,7 @@ function formatFallback(amount: number, currency: string, locale: string): strin
 
 export function formatCurrency(
   amount: number,
-  currency = "USD",
+  currency = "INR",
   numberFormat?: string,
   localeOverride?: string,
 ): string {

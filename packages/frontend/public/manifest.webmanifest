@@ -1,6 +1,6 @@
 {
-  "name": "Inkvoice",
-  "short_name": "Inkvoice",
+  "name": "Invoza",
+  "short_name": "Invoza",
   "description": "Lightweight self-hosted invoicing dashboard.",
   "start_url": "/",
   "scope": "/",

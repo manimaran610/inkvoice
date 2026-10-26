@@ -7,6 +7,10 @@ describe("formatCurrency", () => {
     expect(formatCurrency(12.5, "USD")).toContain("12.50");
   });
 
+  test("defaults to Indian rupees", () => {
+    expect(formatCurrency(12.5)).toContain("₹");
+  });
+
   test("falls back instead of throwing on a malformed code", () => {
     expect(formatCurrency(12.5, "E")).toBe("12.50 E");
     expect(formatCurrency(12.5, "EU")).toBe("12.50 EU");

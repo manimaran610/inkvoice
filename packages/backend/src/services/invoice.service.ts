@@ -29,7 +29,7 @@ import { getTagsForItem, getTagsForItems, removeItemTags, setItemTags } from "./
  * otherwise the caller-supplied rate (manual or fetched), defaulting to 1.
  */
 function resolveExchangeRate(currency: string | undefined, provided: number | undefined): number {
-  const cur = (currency || "USD").toUpperCase();
+  const cur = (currency || "INR").toUpperCase();
   if (cur === getBaseCurrency().toUpperCase()) return 1;
   return provided && provided > 0 ? provided : 1;
 }
@@ -338,7 +338,7 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
         totals.total,
         data.notes || null,
         data.payment_terms || null,
-        data.currency || "USD",
+        data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
         data.template_id || null,
@@ -452,7 +452,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
         totals.total,
         data.notes || null,
         data.payment_terms || null,
-        data.currency || "USD",
+        data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
         data.template_id || null,

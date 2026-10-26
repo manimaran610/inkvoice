@@ -118,7 +118,7 @@ const en = {
   // Login
   auth: {
     welcome_back: "Welcome back",
-    sign_in_to: "Sign in to Inkvoice",
+    sign_in_to: "Sign in to Invoza",
     username: "Username",
     password: "Password",
     sign_in: "Sign In",
@@ -944,17 +944,18 @@ const en = {
     demo_reset_confirm_body:
       "This will erase the current database and re-seed it with demo content. There's no undo.",
     // Onboarding wizard
-    onboarding_title: "Let's get Inkvoice set up",
+    onboarding_title: "Let's get Invoza set up",
     onboarding_subtitle: "A quick walkthrough — you can change anything later in Settings.",
     onboarding_step: "Step {{step}} of {{total}}",
     onboarding_skip: "Skip setup",
     onboarding_next: "Next",
     onboarding_back: "Back",
     onboarding_finish: "Finish",
-    onboarding_region_title: "Where are you based?",
+    onboarding_region_title: "Currency and formats",
     onboarding_region_hint:
-      "We'll pre-fill your currency, locale, and date format. Change any of it below.",
-    onboarding_region_change_later: "You can change any of this later under Settings → General.",
+      "Invoza uses Indian rupees (INR). Choose your preferred locale and date format below.",
+    onboarding_region_change_later:
+      "You can change these format preferences later under Settings → General.",
     onboarding_country: "Country",
     onboarding_business_title: "Business basics",
     onboarding_business_hint: "These appear on every invoice and quote.",
@@ -1332,7 +1333,7 @@ const en = {
   // Signed-in devices (Settings → API, mobile app sessions)
   device_sessions: {
     title: "Signed-in devices",
-    info: "Phones and tablets signed in to the Inkvoice mobile app with your account. Revoke a device to sign it out immediately.",
+    info: "Phones and tablets signed in to the Invoza mobile app with your account. Revoke a device to sign it out immediately.",
     empty: "No devices are signed in.",
     platform_ios: "iOS",
     platform_android: "Android",
@@ -1591,7 +1592,7 @@ const en = {
     participant_status_deregistered: "Deregistered",
     kyc_action_url: "Complete verification at the provider",
     conflict_explainer:
-      "This business is already receiving PEPPOL documents through another access point. Keep that setup and use Inkvoice for sending only, or contact the incumbent to deregister and retry here. Inkvoice never takes over another access point's participant.",
+      "This business is already receiving PEPPOL documents through another access point. Keep that setup and use Invoza for sending only, or contact the incumbent to deregister and retry here. Invoza never takes over another access point's participant.",
     receiver_scheme: "Business scheme (EAS)",
     receiver_identifier: "Business identifier",
     receiver_legal_name: "Legal name",

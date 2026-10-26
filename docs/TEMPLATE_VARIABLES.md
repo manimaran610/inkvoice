@@ -30,7 +30,7 @@ These tokens are available to anything rendered by `pdf.service.ts` (the PDF rou
 | `{{status}}`           | string          | `draft`, `sent`, `paid`, `overdue`, `voided`, etc.                                          |
 | `{{document_title}}`   | string          | `Quote` for quotes; absent for invoices (defaults handled in template).                     |
 | `{{is_quote}}`         | boolean         | True only on quotes — handy for `{{#is_quote}}…{{/is_quote}}`.                              |
-| `{{currency}}`         | string          | ISO 4217 code (`USD`, `EUR`, …).                                                            |
+| `{{currency}}`         | string          | ISO 4217 code (`INR`).                                                                      |
 | `{{payment_terms}}`    | string \| null  | Free-form (e.g. `NET 30`).                                                                  |
 | `{{notes}}`            | string \| null  | Free-form footer notes.                                                                     |
 

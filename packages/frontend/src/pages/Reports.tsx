@@ -146,7 +146,7 @@ export default function Reports() {
   // Revenue/product/cash-flow totals are consolidated into the base currency by
   // the backend, so they're formatted with the base currency symbol.
   const baseCurrency = useSettingsStore(
-    (s) => s.settings.base_currency || s.settings.currency || "USD",
+    (s) => s.settings.base_currency || s.settings.currency || "INR",
   );
   const now = new Date();
   const [dateFrom, setDateFrom] = useState(() => fmtDate(startOfFiscalYear(now, fiscalStartMonth)));

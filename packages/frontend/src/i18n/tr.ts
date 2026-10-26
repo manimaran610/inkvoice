@@ -120,7 +120,7 @@ const tr: TranslationKeys = {
   // Giriş
   auth: {
     welcome_back: "Tekrar hoş geldiniz",
-    sign_in_to: "Inkvoice'a giriş yapın",
+    sign_in_to: "Invoza'ya giriş yapın",
     username: "Kullanıcı Adı",
     password: "Şifre",
     sign_in: "Giriş Yap",
@@ -943,18 +943,18 @@ const tr: TranslationKeys = {
     demo_reset_confirm_body:
       "Mevcut veritabanı silinip demo içeriğiyle yeniden oluşturulacak. Geri alınamaz.",
     // Onboarding wizard
-    onboarding_title: "Inkvoice'u kuralım",
+    onboarding_title: "Invoza'yı kuralım",
     onboarding_subtitle: "Hızlı bir tur — her şeyi daha sonra Ayarlar'dan değiştirebilirsiniz.",
     onboarding_step: "Adım {{step}} / {{total}}",
     onboarding_skip: "Kurulumu atla",
     onboarding_next: "İleri",
     onboarding_back: "Geri",
     onboarding_finish: "Bitir",
-    onboarding_region_title: "Nerede çalışıyorsunuz?",
+    onboarding_region_title: "Para birimi ve biçimler",
     onboarding_region_hint:
-      "Para biriminizi, yerel ayarınızı ve tarih biçiminizi otomatik dolduralım. Aşağıdan değiştirebilirsiniz.",
+      "Invoza Hindistan rupisi (INR) kullanır. Aşağıdan yerel ayarınızı ve tarih biçiminizi seçin.",
     onboarding_region_change_later:
-      "Bunları sonradan Ayarlar → Genel altından değiştirebilirsiniz.",
+      "Biçim tercihlerinizi sonradan Ayarlar → Genel altından değiştirebilirsiniz.",
     onboarding_country: "Ülke",
     onboarding_business_title: "İşletme bilgileri",
     onboarding_business_hint: "Bunlar her fatura ve teklifte görünür.",
@@ -1335,7 +1335,7 @@ const tr: TranslationKeys = {
   // Signed-in devices (Settings → API, mobile app sessions)
   device_sessions: {
     title: "Oturum açık cihazlar",
-    info: "Hesabınızla Inkvoice mobil uygulamasında oturum açmış telefon ve tabletler. Bir cihazın erişimini kaldırırsanız oturumu hemen kapanır.",
+    info: "Hesabınızla Invoza mobil uygulamasında oturum açmış telefon ve tabletler. Bir cihazın erişimini kaldırırsanız oturumu hemen kapanır.",
     empty: "Oturum açık cihaz yok.",
     platform_ios: "iOS",
     platform_android: "Android",
@@ -1596,7 +1596,7 @@ const tr: TranslationKeys = {
     participant_status_deregistered: "Kayıt silindi",
     kyc_action_url: "Doğrulamayı sağlayıcıda tamamlayın",
     conflict_explainer:
-      "Bu işletme zaten başka bir erişim noktası üzerinden PEPPOL belgeleri alıyor. Mevcut yapıyı koruyun ve Inkvoice'i yalnızca gönderim için kullanın ya da mevcut sağlayıcıyla iletişime geçip kaydı sildirin ve buradan tekrar deneyin. Inkvoice başka bir erişim noktasının katılımcısını asla devralmaz.",
+      "Bu işletme zaten başka bir erişim noktası üzerinden PEPPOL belgeleri alıyor. Mevcut yapıyı koruyun ve Invoza'yı yalnızca gönderim için kullanın ya da mevcut sağlayıcıyla iletişime geçip kaydı sildirin ve buradan tekrar deneyin. Invoza başka bir erişim noktasının katılımcısını asla devralmaz.",
     receiver_scheme: "İşletme şeması (EAS)",
     receiver_identifier: "İşletme kimliği",
     receiver_legal_name: "Yasal ad",

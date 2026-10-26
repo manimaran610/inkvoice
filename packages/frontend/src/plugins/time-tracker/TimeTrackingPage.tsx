@@ -151,7 +151,7 @@ function ProjectDot({ color, name }: { color: string | null; name: string }) {
 export default function TimeTrackingPage() {
   const { t } = useTranslation();
   const currency =
-    useSettingsStore((s) => s.settings.base_currency || s.settings.currency) || "USD";
+    useSettingsStore((s) => s.settings.base_currency || s.settings.currency) || "INR";
   const { user } = useAuthStore();
   const isAdmin = !!user?.is_admin;
   const canBill =

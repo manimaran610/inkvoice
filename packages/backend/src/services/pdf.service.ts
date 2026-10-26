@@ -150,7 +150,7 @@ export function buildInvoiceContext(invoiceId: string) {
     }
   }
 
-  const currency = invoice.currency || settings.currency || "USD";
+  const currency = invoice.currency || settings.currency || "INR";
   const dateFormat = settings.date_format || undefined;
   const numberFormat = settings.number_format || undefined;
 
@@ -371,7 +371,7 @@ export function buildQuoteContext(quoteId: string) {
     }
   }
 
-  const currency = quote.currency || settings.currency || "USD";
+  const currency = quote.currency || settings.currency || "INR";
   const dateFormat = settings.date_format || undefined;
   const numberFormat = settings.number_format || undefined;
 

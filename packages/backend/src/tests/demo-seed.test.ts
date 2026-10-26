@@ -90,10 +90,9 @@ describe("seed() company profile", () => {
       expect(settings[key]).toBeTruthy();
     }
     expect(settings.company_country).toBe("US");
-    // The demo invoices are USD, so the profile must not drift from them.
-    expect(settings.currency).toBe("USD");
-    expect(settings.base_currency).toBe("USD");
-    expect(settings.locale).toBe("en-US");
+    expect(settings.currency).toBe("INR");
+    expect(settings.base_currency).toBe("INR");
+    expect(settings.locale).toBe("en-IN");
   });
 
   test("keeps the generic 'No Tax' definition for the US demo company", async () => {

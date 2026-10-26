@@ -14,7 +14,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   fetchSettings: async () => {
     try {
       const res = await api.getSettings();
-      set({ settings: res.data, isLoading: false });
+      set({
+        settings: { ...res.data, currency: "INR", base_currency: "INR" },
+        isLoading: false,
+      });
     } catch {
       set({ isLoading: false });
     }

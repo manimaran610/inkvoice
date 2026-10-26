@@ -21,7 +21,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/api/client";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
-import { CurrencyCombobox } from "@/components/shared/CurrencyCombobox";
 import { FormField } from "@/components/shared/FormField";
 import { type SaveStatus, SaveStatusIndicator } from "@/components/shared/SaveStatusIndicator";
 import { Button } from "@/components/ui/button";
@@ -190,7 +189,7 @@ export default function QuoteForm() {
   const [customerId, setCustomerId] = useState("");
   const [issueDate, setIssueDate] = useState(todayIso());
   const [validUntil, setValidUntil] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [locale, setLocale] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItem[]>([
@@ -470,9 +469,6 @@ export default function QuoteForm() {
                 value={validUntil}
                 onChange={(e) => setValidUntil(e.target.value)}
               />
-            </FormField>
-            <FormField label={t("invoices.currency")}>
-              <CurrencyCombobox value={currency} onChange={setCurrency} />
             </FormField>
             <FormField label={t("invoices.locale")} hint={t("invoices.locale_hint")}>
               <select

@@ -8,8 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 function getCurrentLocale(): string {
   try {
     const lang = localStorage.getItem("inkvoice-lang") || "en";
-    const localeMap: Record<string, string> = { en: "en-US", tr: "tr-TR" };
-    return localeMap[lang] || "en-US";
+    const localeMap: Record<string, string> = { en: "en-IN", tr: "tr-TR" };
+    return localeMap[lang] || "en-IN";
   } catch {
     return "en-US";
   }
@@ -27,7 +27,7 @@ function getLocaleForNumberFormat(numberFormat?: string): string {
   }
 }
 
-export function formatCurrency(amount: number, currency = "USD", numberFormat?: string): string {
+export function formatCurrency(amount: number, currency = "INR", numberFormat?: string): string {
   const locale = numberFormat ? getLocaleForNumberFormat(numberFormat) : getCurrentLocale();
   try {
     return new Intl.NumberFormat(locale, {

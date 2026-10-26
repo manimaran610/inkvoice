@@ -27,7 +27,7 @@ PUT /api/v1/settings
   "business_postal_code": "10001",
   "business_country": "US",
   "business_tax_id": "US987654321",
-  "default_currency": "USD",
+  "default_currency": "INR",
   "invoice_prefix": "INV-",
   "invoice_next_number": 1001,
   "default_payment_terms": "Net 30",

@@ -360,24 +360,6 @@ export default function CustomerForm({ onSave }: Props) {
               </FormField>
 
               <FormField
-                label={t("customers.default_currency")}
-                hint={t("customers.default_currency_hint")}
-              >
-                <select
-                  value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                  className="form-select"
-                >
-                  <option value="">{t("customers.default_currency_inherit")}</option>
-                  {["USD", "EUR", "GBP", "TRY", "JPY", "CAD", "AUD", "CHF"].map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField
                 label={t("customers.default_template")}
                 hint={t("customers.default_template_hint")}
               >

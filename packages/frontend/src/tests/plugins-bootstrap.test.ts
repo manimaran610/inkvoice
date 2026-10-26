@@ -26,7 +26,12 @@ describe("oss plugin bootstrap", () => {
   test("registers the time-tracker route and nav item", () => {
     expect(protectedPaths).toContain("/time-tracking");
     expect(
-      getNavItems().some((n) => n.to === "/time-tracking" && n.pluginId === "time-tracker"),
+      getNavItems().some(
+        (n) =>
+          n.to === "/time-tracking" &&
+          n.pluginId === "time-tracker" &&
+          n.hiddenForRoles?.includes("Accountant"),
+      ),
     ).toBe(true);
   });
 

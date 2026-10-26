@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "@/api/client";
-import { InkvoiceLogo } from "@/components/InkvoiceLogo";
+import { InvozaLogo } from "@/components/InvozaLogo";
 import { Slot } from "@/components/layout/slot-registry";
 import { FormField } from "@/components/shared/FormField";
 import { Button } from "@/components/ui/button";
@@ -100,7 +100,7 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <InkvoiceLogo className="h-16" />
+            <InvozaLogo className="h-16" />
           </div>
           <CardTitle className="text-xl">{t("auth.welcome_back")}</CardTitle>
           <CardDescription>{t("auth.sign_in_to")}</CardDescription>

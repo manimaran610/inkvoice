@@ -8,7 +8,7 @@ import { createInvoice } from "./invoice.service";
 
 /** Force rate to 1 when the expense is already in the base currency. */
 function resolveExchangeRate(currency: string | undefined, provided: number | undefined): number {
-  const cur = (currency || "USD").toUpperCase();
+  const cur = (currency || "INR").toUpperCase();
   if (cur === getBaseCurrency().toUpperCase()) return 1;
   return provided && provided > 0 ? provided : 1;
 }
@@ -200,7 +200,7 @@ export function createExpense(data: Partial<Expense>): Expense {
       tax_rate,
       tax_amount,
       total,
-      data.currency || "USD",
+      data.currency || "INR",
       resolveExchangeRate(data.currency, data.exchange_rate),
       data.receipt_reference || null,
       data.customer_id || null,
@@ -245,7 +245,7 @@ export function updateExpense(id: string, data: Partial<Expense>): Expense | nul
       tax_rate,
       tax_amount,
       total,
-      data.currency || "USD",
+      data.currency || "INR",
       resolveExchangeRate(data.currency, data.exchange_rate),
       receiptReference,
       data.customer_id || null,

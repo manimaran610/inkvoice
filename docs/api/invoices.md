@@ -31,7 +31,7 @@ POST /api/v1/invoices
   "customer_id": "customer-uuid",
   "issue_date": "2026-01-15",
   "due_date": "2026-02-15",
-  "currency": "USD",
+  "currency": "INR",
   "notes": "Thank you for your business",
   "payment_terms": "Net 30",
   "discount_type": "percentage",

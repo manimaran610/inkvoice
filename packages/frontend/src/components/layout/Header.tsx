@@ -92,7 +92,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <Menu className="h-4 w-4" />
           </Button>
           <div className="font-mono text-[11px] uppercase tracking-[0.10em] text-muted-foreground/80 truncate">
-            Inkvoice <span className="opacity-60 mx-1">/</span> {crumb}
+            Invoza <span className="opacity-60 mx-1">/</span> {crumb}
           </div>
 
           <div className="ml-auto flex items-center gap-2">

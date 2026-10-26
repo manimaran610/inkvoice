@@ -21,7 +21,7 @@ POST /api/v1/quotes
   "customer_id": "customer-uuid",
   "issue_date": "2026-01-15",
   "valid_until": "2026-02-15",
-  "currency": "USD",
+  "currency": "INR",
   "notes": "This quote is valid for 30 days",
   "items": [
     {
