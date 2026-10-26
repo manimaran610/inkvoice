@@ -23,10 +23,9 @@ import { api } from "@/api/client";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { CustomerCombobox } from "@/components/shared/CustomerCombobox";
 import { FormField } from "@/components/shared/FormField";
-import { PaymentTermsPicker, paymentTermsToDays } from "@/components/shared/PaymentTermsPicker";
+import { paymentTermsToDays } from "@/components/shared/PaymentTermsPicker";
 import { ProductCombobox } from "@/components/shared/ProductCombobox";
 import { type SaveStatus, SaveStatusIndicator } from "@/components/shared/SaveStatusIndicator";
-import { TagInput } from "@/components/shared/TagInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +40,8 @@ import { markRowHighlight } from "@/lib/highlight-row";
 import { consumeInvoiceDraft, saveInvoiceDraft } from "@/lib/invoice-draft";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings.store";
+
+const DEFAULT_INVOICE_LOCALE = "en-US";
 
 interface LineItem {
   _key: string;
@@ -107,7 +108,7 @@ function SortableLineItem({
 
   return (
     <div ref={setNodeRef} style={style} className={cn("space-y-1", isDragging && "opacity-50")}>
-      <div className="grid grid-cols-[auto_2fr_2fr_1fr_1fr_1.5fr_1.5fr_1fr] gap-2 items-end min-w-[720px] sm:min-w-0">
+      <div className="grid grid-cols-[auto_2fr_1fr_1fr_1.5fr_1.5fr_1fr] gap-2 items-end min-w-[620px] sm:min-w-0">
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -130,19 +131,6 @@ function SortableLineItem({
             value={item.product_id}
             onChange={(productId) => onProductSelect(index, productId)}
             onAddNew={(search) => onAddNewProduct(index, search)}
-          />
-        </div>
-        <div>
-          {isFirst && (
-            <Label className="text-xs text-muted-foreground">
-              {t("invoices.description")} <span className="text-destructive">*</span>
-            </Label>
-          )}
-          <Input
-            value={item.description}
-            onChange={(e) => onUpdateItem(index, "description", e.target.value)}
-            placeholder={t("invoices.description")}
-            aria-invalid={!!errors[`item_${index}_description`]}
           />
         </div>
         <div>
@@ -259,7 +247,6 @@ export default function InvoiceForm({ onSave }: Props) {
   });
   const [products, setProducts] = useState<any[]>([]);
   const [taxDefs, setTaxDefs] = useState<any[]>([]);
-  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -273,7 +260,7 @@ export default function InvoiceForm({ onSave }: Props) {
     notes: "",
     currency: "INR",
     exchange_rate: 1,
-    locale: "",
+    locale: DEFAULT_INVOICE_LOCALE,
     discount_type: "" as string,
     discount_value: 0,
     cash_discount_type: "" as string,
@@ -374,7 +361,6 @@ export default function InvoiceForm({ onSave }: Props) {
     fetchCustomers();
     api.listProducts({ limit: "1000", active: "true" }).then((r) => setProducts(r.data.items));
     api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
-    api.listTags().then((r) => setTagSuggestions(r.data.map((t) => t.name)));
 
     if (!isEdit) {
       // Restore an in-progress draft if we're coming back from "Add customer";
@@ -382,7 +368,7 @@ export default function InvoiceForm({ onSave }: Props) {
       // defaults fetch when restoring avoids clobbering the user's draft.)
       const draft = consumeInvoiceDraft();
       if (draft) {
-        setForm(draft.form as typeof form);
+        setForm({ ...(draft.form as typeof form), locale: DEFAULT_INVOICE_LOCALE });
         setItems((draft.items as LineItem[]).map((it) => ({ ...it, _key: genKey() })));
       } else {
         api.getSettings().then((r) => {
@@ -424,7 +410,7 @@ export default function InvoiceForm({ onSave }: Props) {
           notes: inv.notes || "",
           currency: inv.currency,
           exchange_rate: inv.exchange_rate ?? 1,
-          locale: inv.locale || "",
+          locale: inv.locale || DEFAULT_INVOICE_LOCALE,
           discount_type: inv.discount_type || "",
           discount_value: inv.discount_value || 0,
           cash_discount_type: inv.cash_discount_type || "",
@@ -471,7 +457,7 @@ export default function InvoiceForm({ onSave }: Props) {
       ...form,
       // New invoices omit invoice_number — the backend generates a draft number.
       invoice_number: isEdit ? form.invoice_number : undefined,
-      locale: form.locale || null,
+      locale: form.locale || DEFAULT_INVOICE_LOCALE,
       discount_type: form.discount_type || null,
       cash_discount_type: form.cash_discount_type || null,
       cash_discount_value: form.cash_discount_value,
@@ -513,7 +499,7 @@ export default function InvoiceForm({ onSave }: Props) {
     newItems[index] = {
       ...newItems[index],
       product_id: productId,
-      description: product.name + (product.description ? ` - ${product.description}` : ""),
+      description: product.name,
       unit_price: product.unit_price,
       unit: product.unit,
       tax_id: product.tax_id || "",
@@ -874,51 +860,6 @@ export default function InvoiceForm({ onSave }: Props) {
                 aria-invalid={!!errors.due_date}
               />
             </FormField>
-            <FormField label={t("invoices.payment_terms")}>
-              <PaymentTermsPicker
-                value={form.payment_terms}
-                onChange={(value) => {
-                  // Picking recognised terms recomputes the due date from the
-                  // issue date; the due date stays directly editable after.
-                  const days = paymentTermsToDays(value);
-                  setForm((f) => ({
-                    ...f,
-                    payment_terms: value,
-                    due_date:
-                      days !== null && f.issue_date ? addDaysIso(f.issue_date, days) : f.due_date,
-                  }));
-                }}
-              />
-            </FormField>
-            <FormField label={t("invoices.locale")} hint={t("invoices.locale_hint")}>
-              <select
-                value={form.locale}
-                onChange={(e) => setForm({ ...form, locale: e.target.value })}
-                className="form-select"
-              >
-                <option value="">{t("common.none")}</option>
-                <option value="en-US">en-US</option>
-                <option value="en-GB">en-GB</option>
-                <option value="de-DE">de-DE</option>
-                <option value="fr-FR">fr-FR</option>
-                <option value="es-ES">es-ES</option>
-                <option value="it-IT">it-IT</option>
-                <option value="pt-BR">pt-BR</option>
-                <option value="nl-NL">nl-NL</option>
-                <option value="tr-TR">tr-TR</option>
-                <option value="ja-JP">ja-JP</option>
-                <option value="zh-CN">zh-CN</option>
-              </select>
-            </FormField>
-            <FormField label={t("tags.title")} hint={t("tags.hint")}>
-              <TagInput
-                value={form.tags}
-                onChange={(tags) => setForm((f) => ({ ...f, tags }))}
-                suggestions={tagSuggestions}
-                placeholder={t("tags.placeholder")}
-                ariaLabel={t("tags.title")}
-              />
-            </FormField>
           </CardContent>
         </Card>
 
@@ -1006,89 +947,6 @@ export default function InvoiceForm({ onSave }: Props) {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("invoices.subtotal")}</span>
                 <span className="tabular-nums">{formatCurrency(subtotal, form.currency)}</span>
-              </div>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">{t("invoices.discount")}</Label>
-                  <select
-                    value={form.discount_type}
-                    onChange={(e) => setForm({ ...form, discount_type: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="">{t("common.none")}</option>
-                    <option value="percentage">%</option>
-                    <option value="amount">{t("common.fixed")}</option>
-                  </select>
-                </div>
-                {form.discount_type && (
-                  <div className="flex-1">
-                    <NumberInput
-                      value={form.discount_value}
-                      min={0}
-                      decimals={2}
-                      onValueChange={(v) => setForm({ ...form, discount_value: v })}
-                    />
-                  </div>
-                )}
-              </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{t("invoices.discount")}</span>
-                  <span className="tabular-nums">
-                    -{formatCurrency(discountAmount, form.currency)}
-                  </span>
-                </div>
-              )}
-              {/* Early-payment (cash) discount */}
-              <div className="space-y-2 border-t pt-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t("invoices.cash_discount")}
-                  </span>
-                </div>
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Label className="text-xs text-muted-foreground">
-                      {t("invoices.cash_discount_type")}
-                    </Label>
-                    <select
-                      value={form.cash_discount_type}
-                      onChange={(e) => setForm({ ...form, cash_discount_type: e.target.value })}
-                      className="form-select"
-                    >
-                      <option value="">{t("common.none")}</option>
-                      <option value="percentage">%</option>
-                      <option value="amount">{t("common.fixed")}</option>
-                    </select>
-                  </div>
-                  {form.cash_discount_type && (
-                    <div className="flex-1">
-                      <Label className="text-xs text-muted-foreground">
-                        {t("invoices.cash_discount_value")}
-                      </Label>
-                      <NumberInput
-                        value={form.cash_discount_value}
-                        min={0}
-                        decimals={2}
-                        onValueChange={(v) => setForm({ ...form, cash_discount_value: v })}
-                      />
-                    </div>
-                  )}
-                </div>
-                {form.cash_discount_type && (
-                  <div className="flex gap-2 items-center">
-                    <Label className="text-xs text-muted-foreground">
-                      {t("invoices.cash_discount_days")}
-                    </Label>
-                    <NumberInput
-                      value={form.cash_discount_days}
-                      min={0}
-                      integer
-                      className="flex-1"
-                      onValueChange={(v) => setForm({ ...form, cash_discount_days: v })}
-                    />
-                  </div>
-                )}
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("invoices.tax")}</span>
