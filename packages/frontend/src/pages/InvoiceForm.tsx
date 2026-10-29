@@ -67,13 +67,13 @@ function SortableLineItem({
   index,
   isFirst,
   products,
-  taxDefs,
   errors,
   itemCount,
   onProductSelect,
   onUpdateItem,
   onRemoveItem,
   onAddNewProduct,
+  onAdvanceRow,
   t,
 }: {
   id: string;
@@ -81,13 +81,13 @@ function SortableLineItem({
   index: number;
   isFirst: boolean;
   products: any[];
-  taxDefs: any[];
   errors: Record<string, string>;
   itemCount: number;
   onProductSelect: (index: number, productId: string) => void;
   onUpdateItem: (index: number, field: string, value: any) => void;
   onRemoveItem: (index: number) => void;
   onAddNewProduct: (index: number, search: string) => void;
+  onAdvanceRow: (index: number) => void;
   t: (key: string) => string;
 }) {
   const {
@@ -109,7 +109,24 @@ function SortableLineItem({
 
   return (
     <div ref={setNodeRef} style={style} className={cn("space-y-1", isDragging && "opacity-50")}>
-      <div className="grid grid-cols-[auto_2fr_1fr_1fr_1.5fr_1.5fr_1fr] gap-2 items-end min-w-[620px] sm:min-w-0">
+      <div
+        className="grid grid-cols-[auto_2fr_1fr_1fr_1.5fr_1fr] gap-2 items-end min-w-[620px] sm:min-w-0"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.shiftKey) {
+            event.preventDefault();
+            onAdvanceRow(index);
+            return;
+          }
+          if (
+            event.key === "Tab" &&
+            !event.shiftKey &&
+            (event.target as HTMLElement).matches("[data-line-item-last]")
+          ) {
+            event.preventDefault();
+            onAdvanceRow(index);
+          }
+        }}
+      >
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -132,6 +149,7 @@ function SortableLineItem({
             value={item.product_id}
             onChange={(productId) => onProductSelect(index, productId)}
             onAddNew={(search) => onAddNewProduct(index, search)}
+            productTriggerId={item._key}
           />
         </div>
         <div>
@@ -163,24 +181,10 @@ function SortableLineItem({
             value={item.unit_price}
             min={0}
             decimals={2}
+            data-line-item-last
             onValueChange={(v) => onUpdateItem(index, "unit_price", v)}
             aria-invalid={!!errors[`item_${index}_unit_price`]}
           />
-        </div>
-        <div>
-          {isFirst && <Label className="text-xs text-muted-foreground">{t("invoices.tax")}</Label>}
-          <select
-            value={item.tax_id}
-            onChange={(e) => onUpdateItem(index, "tax_id", e.target.value)}
-            className="form-select"
-          >
-            <option value="">{t("invoices.no_tax")}</option>
-            {taxDefs.map((td: any) => (
-              <option key={td.id} value={td.id}>
-                {td.name}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-sm font-medium w-full text-right tabular-nums">
@@ -546,6 +550,32 @@ export default function InvoiceForm({ onSave }: Props) {
     ]);
   }, []);
 
+  const advanceToRow = useCallback((index: number) => {
+    let productKey = "";
+    setItems((prev) => {
+      if (index + 1 < prev.length) {
+        productKey = prev[index + 1]._key;
+        return prev;
+      }
+      const newItem = {
+        _key: genKey(),
+        product_id: "",
+        description: "",
+        quantity: 1,
+        unit_price: 0,
+        unit: "kg",
+        tax_id: "",
+        tax_rate: 0,
+        sort_order: prev.length,
+      };
+      productKey = newItem._key;
+      return [...prev, newItem];
+    });
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(`[data-product-trigger-id="${productKey}"]`)?.focus();
+    });
+  }, []);
+
   // Keyboard shortcuts: Ctrl/Cmd+S to save, Ctrl/Cmd+Enter to add item
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -898,13 +928,13 @@ export default function InvoiceForm({ onSave }: Props) {
                         index={i}
                         isFirst={i === 0}
                         products={products}
-                        taxDefs={taxDefs}
                         errors={errors}
                         itemCount={items.length}
                         onProductSelect={handleProductSelect}
                         onUpdateItem={updateItem}
                         onRemoveItem={removeItem}
                         onAddNewProduct={handleAddProduct}
+                        onAdvanceRow={advanceToRow}
                         t={t}
                       />
                     ))}

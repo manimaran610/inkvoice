@@ -26,9 +26,16 @@ interface ProductComboboxProps {
   /** Called when the user chooses to create a new product or service; receives
    *  the current search text so the product-create page can pre-fill the name. */
   onAddNew: (search: string) => void;
+  productTriggerId?: string;
 }
 
-export function ProductCombobox({ products, value, onChange, onAddNew }: ProductComboboxProps) {
+export function ProductCombobox({
+  products,
+  value,
+  onChange,
+  onAddNew,
+  productTriggerId,
+}: ProductComboboxProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -49,7 +56,12 @@ export function ProductCombobox({ products, value, onChange, onAddNew }: Product
     >
       <PopoverTrigger
         render={
-          <Button type="button" variant="outline" className="w-full justify-between font-normal" />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-between font-normal"
+            data-product-trigger-id={productTriggerId}
+          />
         }
       >
         <span className={cn("truncate", !selected && "text-muted-foreground")}>
