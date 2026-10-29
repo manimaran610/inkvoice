@@ -4,12 +4,13 @@ import {
   FileText,
   Globe,
   Plus,
+  Printer,
   ReceiptText,
   RotateCcw,
   Search,
   Trash2,
 } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/api/client";
@@ -40,6 +41,8 @@ import { formatApiError } from "@/lib/format-api-error";
 import { consumeRowHighlight } from "@/lib/highlight-row";
 import { isRecordId } from "@/lib/record-id";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings.store";
+import reportTemplate from "@/templates/invoice-report.html?raw";
 
 const InvoiceForm = lazy(() => import("@/pages/InvoiceForm"));
 const InvoiceView = lazy(() => import("@/pages/InvoiceView"));
@@ -66,6 +69,8 @@ const INVOICE_LIST_SEGMENTS = new Set([
 
 export default function Invoices() {
   const { t } = useTranslation();
+  const companySettings = useSettingsStore((state) => state.settings);
+  const companyName = companySettings.company_name || "";
   const [invoices, setInvoices] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -77,6 +82,8 @@ export default function Invoices() {
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [batchAction, setBatchAction] = useState<{ action: string; label: string } | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const reportPrintIframeRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const location = useLocation();
@@ -205,6 +212,120 @@ export default function Invoices() {
     setSort(direction ? { key, direction } : null);
   };
 
+  const generateReport = async () => {
+    setReportLoading(true);
+    try {
+      const filters: Record<string, string> = {};
+      if (search) filters.search = search;
+      if (isCreditNotes) {
+        filters.type = "credit_note";
+      } else if (statusFilter !== "all") {
+        filters.status = statusFilter;
+      }
+      if (customerIdFilter) filters.customer_id = customerIdFilter;
+      if (dateRange.from) filters.from = dateRange.from;
+      if (dateRange.to) filters.to = dateRange.to;
+      if (tags.length > 0) filters.tags = tags.join(",");
+
+      const firstPage = await api.listInvoices({ ...filters, page: "1", limit: "100" });
+      const allInvoices = [...firstPage.data.items];
+      const pageCount = Math.ceil(firstPage.data.total / 100);
+      for (let reportPage = 2; reportPage <= pageCount; reportPage += 1) {
+        const res = await api.listInvoices({
+          ...filters,
+          page: String(reportPage),
+          limit: "100",
+        });
+        allInvoices.push(...res.data.items);
+      }
+      printReport(allInvoices);
+    } catch (err: unknown) {
+      toast.error(formatApiError(err, t));
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const printReport = (reportInvoices: any[]) => {
+    const escapeHtml = (value: string) =>
+      value.replace(
+        /[&<>"']/g,
+        (character) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[character] || character,
+      );
+    const rows = reportInvoices
+      .map(
+        (invoice) => `
+          <tr>
+            <td class="invoice-number">${escapeHtml(String(invoice.invoice_number || ""))}</td>
+            <td>${escapeHtml(String(invoice.customer_name || ""))}</td>
+            <td>${escapeHtml(formatDate(invoice.issue_date))}</td>
+            <td class="amount">${escapeHtml(formatCurrency(invoice.total, invoice.currency))}</td>
+          </tr>`,
+      )
+      .join("");
+    const reportTotals = reportInvoices.reduce<Record<string, number>>((totals, invoice) => {
+      const currency = invoice.currency || "USD";
+      totals[currency] = (totals[currency] || 0) + Number(invoice.total || 0);
+      return totals;
+    }, {});
+    const totals = Object.entries(reportTotals)
+      .map(([currency, amount]) => `<div>${escapeHtml(formatCurrency(amount, currency))}</div>`)
+      .join("");
+    const companyDetails = [
+      companySettings.company_address,
+      [companySettings.company_email, companySettings.company_phone].filter(Boolean).join(" · "),
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const logo = companySettings.company_logo
+      ? `<img class="logo" src="${escapeHtml(companySettings.company_logo)}" alt="${escapeHtml(companyName || "Inkvoice")}" />`
+      : "";
+    const replacements: Record<string, string> = {
+      report_title: escapeHtml(t("invoices.generate_report")),
+      company_logo: logo,
+      company_name: escapeHtml(companyName || "Inkvoice"),
+      company_details: escapeHtml(companyDetails),
+      report_count: escapeHtml(
+        t("invoices.report_invoice_count", { count: String(reportInvoices.length) }),
+      ),
+      invoice_number_label: escapeHtml(t("invoices.invoice_number")),
+      customer_label: escapeHtml(t("invoices.customer")),
+      date_label: escapeHtml(t("invoices.issue_date")),
+      total_label: escapeHtml(t("common.total")),
+      invoice_rows: rows,
+      report_totals: totals,
+      generated_date: escapeHtml(new Date().toLocaleDateString()),
+    };
+    const html = reportTemplate.replace(
+      /\{\{(\w+)\}\}/g,
+      (_, key: string) => replacements[key] ?? "",
+    );
+    const iframe = reportPrintIframeRef.current;
+    if (!iframe) {
+      toast.error(t("invoices.report_print_failed"));
+      return;
+    }
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      toast.error(t("invoices.report_print_failed"));
+      return;
+    }
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 300);
+  };
+
   const executeBatch = async () => {
     if (!batchAction) return;
     setBatchLoading(true);
@@ -268,6 +389,10 @@ export default function Invoices() {
                 setPage(1);
               }}
             />
+            <Button variant="outline" onClick={generateReport} disabled={reportLoading}>
+              <Printer className="h-4 w-4 mr-2" />
+              {reportLoading ? t("common.loading") : t("invoices.report")}
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
@@ -636,6 +761,19 @@ export default function Invoices() {
         }
         onConfirm={executeBatch}
         loading={batchLoading}
+      />
+
+      <iframe
+        ref={reportPrintIframeRef}
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "210mm",
+          height: "297mm",
+          border: "none",
+        }}
+        title={t("invoices.generate_report")}
       />
     </div>
   );

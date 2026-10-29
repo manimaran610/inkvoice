@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{report_title}}</title>
+    <style>
+      @page { size: A4 portrait; margin: 14mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: #172033;
+        background: #fff;
+        font: 10pt -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .receipt {
+        border: 1px solid #dfe3e8;
+        padding: 18mm 14mm 14mm;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #172033;
+        padding-bottom: 14px;
+        margin-bottom: 18px;
+      }
+      .company {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        max-width: 58%;
+      }
+      .logo {
+        display: block;
+        max-width: 130px;
+        max-height: 58px;
+        object-fit: contain;
+      }
+      .company-name {
+        font-size: 14pt;
+        font-weight: 700;
+      }
+      .company-details {
+        color: #667085;
+        font-size: 8.5pt;
+        line-height: 1.5;
+        white-space: pre-line;
+      }
+      .report-heading { text-align: right; }
+      h1 {
+        margin: 0 0 5px;
+        font-size: 19pt;
+        letter-spacing: .02em;
+      }
+      .meta {
+        color: #667085;
+        font-size: 9pt;
+        line-height: 1.6;
+      }
+      table { width: 100%; border-collapse: collapse; }
+      thead { display: table-header-group; }
+      th, td {
+        border-bottom: 1px solid #dfe3e8;
+        padding: 9px 7px;
+        text-align: left;
+      }
+      th {
+        background: #f3f5f7;
+        color: #475467;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 700;
+      }
+      .invoice-number { font-weight: 600; }
+      .amount { text-align: right; white-space: nowrap; }
+      .total td {
+        border-top: 2px solid #172033;
+        border-bottom: 0;
+        font-weight: 700;
+        padding-top: 14px;
+      }
+      .total-label { text-align: right; }
+      .footer {
+        color: #667085;
+        font-size: 8.5pt;
+        margin-top: 18px;
+        text-align: center;
+      }
+      @media print {
+        .receipt { border: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="receipt">
+      <header class="header">
+        <div class="company">
+          {{company_logo}}
+          <div>
+            <div class="company-name">{{company_name}}</div>
+            <div class="company-details">{{company_details}}</div>
+          </div>
+        </div>
+        <div class="report-heading">
+          <h1>{{report_title}}</h1>
+          <div class="meta">{{report_count}}</div>
+        </div>
+      </header>
+      <table>
+        <thead>
+          <tr>
+            <th>{{invoice_number_label}}</th>
+            <th>{{customer_label}}</th>
+            <th>{{date_label}}</th>
+            <th class="amount">{{total_label}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{invoice_rows}}
+          <tr class="total">
+            <td colspan="3" class="total-label">{{total_label}}</td>
+            <td class="amount">{{report_totals}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="footer">{{generated_date}}</div>
+    </main>
+  </body>
+</html>

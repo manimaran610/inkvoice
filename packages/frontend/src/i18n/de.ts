@@ -254,6 +254,10 @@ const de: TranslationKeys = {
     // Toast-Meldungen
     batch_success: "{{count}} Rechnung(en): {{action}}",
     batch_failed: "{{count}} Rechnung(en) fehlgeschlagen",
+    generate_report: "Bericht erstellen",
+    report: "Bericht",
+    report_invoice_count: "{{count}} Rechnung(en)",
+    report_print_failed: "Der Bericht konnte nicht zum Drucken vorbereitet werden.",
     invoice_created: "Rechnung erstellt",
     invoice_updated: "Rechnung aktualisiert",
     invoice_not_editable:

@@ -237,6 +237,10 @@ const en = {
     // Toast messages
     batch_success: "{{count}} invoice(s) {{action}}",
     batch_failed: "{{count}} invoice(s) failed",
+    generate_report: "Generate Report",
+    report: "Report",
+    report_invoice_count: "{{count}} invoice(s)",
+    report_print_failed: "The report could not be prepared for printing.",
     invoice_created: "Invoice created",
     invoice_updated: "Invoice updated",
     invoice_not_editable:

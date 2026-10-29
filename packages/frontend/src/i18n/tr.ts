@@ -240,6 +240,10 @@ const tr: TranslationKeys = {
     // Bildirimler
     batch_success: "{{count}} fatura {{action}}",
     batch_failed: "{{count}} fatura başarısız oldu",
+    generate_report: "Rapor Oluştur",
+    report: "Rapor",
+    report_invoice_count: "{{count}} fatura",
+    report_print_failed: "Rapor yazdırma için hazırlanamadı.",
     invoice_created: "Fatura oluşturuldu",
     invoice_updated: "Fatura güncellendi",
     invoice_not_editable:

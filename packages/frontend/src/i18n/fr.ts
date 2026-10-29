@@ -245,6 +245,10 @@ const fr: TranslationKeys = {
     // Messages toast
     batch_success: "{{count}} facture(s) {{action}}",
     batch_failed: "{{count}} facture(s) en échec",
+    generate_report: "Générer le rapport",
+    report: "Rapport",
+    report_invoice_count: "{{count}} facture(s)",
+    report_print_failed: "Le rapport n'a pas pu être préparé pour l'impression.",
     invoice_created: "Facture créée",
     invoice_updated: "Facture mise à jour",
     invoice_not_editable:

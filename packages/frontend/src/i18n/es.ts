@@ -244,6 +244,10 @@ const es: TranslationKeys = {
     // Mensajes emergentes
     batch_success: "{{count}} factura(s) {{action}}",
     batch_failed: "{{count}} factura(s) con error",
+    generate_report: "Generar informe",
+    report: "Informe",
+    report_invoice_count: "{{count}} factura(s)",
+    report_print_failed: "No se pudo preparar el informe para imprimir.",
     invoice_created: "Factura creada",
     invoice_updated: "Factura actualizada",
     invoice_not_editable:
