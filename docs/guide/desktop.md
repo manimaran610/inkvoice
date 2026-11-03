@@ -78,3 +78,6 @@ The first Windows build must be performed on Windows (or with a configured
 Windows MSVC cross-compilation toolchain), because the bundled sidecar is a
 Windows executable. The current development machine has no Rust toolchain, so
 it can validate the web bundle but cannot emit the `.exe` installer locally.
+
+The Windows icon is sourced from `packages/frontend/public/icon-192.png` and
+stored as `src-tauri/icons/icon.ico` for Tauri's Windows resource generation.
