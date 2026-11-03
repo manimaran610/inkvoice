@@ -1,5 +1,5 @@
 import { ChevronsUpDown, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -39,7 +39,14 @@ export function ProductCombobox({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const selected = products.find((p) => p.id === value);
+
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    }
+  }, [open]);
 
   const handleAddNew = () => {
     setOpen(false);
@@ -61,6 +68,19 @@ export function ProductCombobox({
             variant="outline"
             className="w-full justify-between font-normal"
             data-product-trigger-id={productTriggerId}
+            onKeyDown={(event) => {
+              if (event.key === " " && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                event.preventDefault();
+                setOpen(true);
+                return;
+              }
+
+              if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                event.preventDefault();
+                setSearch(event.key);
+                setOpen(true);
+              }
+            }}
           />
         }
       >
@@ -72,6 +92,7 @@ export function ProductCombobox({
       <PopoverContent className="w-(--anchor-width) min-w-72 p-0">
         <Command>
           <CommandInput
+            ref={searchInputRef}
             value={search}
             onValueChange={setSearch}
             placeholder={t("invoices.search_product")}
