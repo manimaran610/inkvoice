@@ -5,6 +5,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
+use tauri_plugin_shell::ShellExt;
 
 fn main() {
     tauri::Builder::default()
