@@ -43,6 +43,9 @@ jobs:
             --minify `
             --outfile "src-tauri/binaries/inkvoice-backend-x86_64-pc-windows-msvc.exe"
 
+      - name: Build frontend
+        run: bun run build
+
       - name: Check desktop Rust crate
         run: cargo check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc
 

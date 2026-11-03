@@ -69,8 +69,10 @@ tag such as `v0.3.1` runs the same build automatically. This workflow does not
 code-sign the installer; Windows may show a SmartScreen warning until a
 trusted code-signing certificate is configured.
 
-The workflow also runs `cargo check` before packaging, so Rust compilation
-errors are reported before the longer installer build begins.
+The workflow builds the frontend before running `cargo check`, because Tauri
+validates the configured frontend distribution directory during Rust
+compilation. Rust compilation errors are reported before the longer installer
+packaging step begins.
 
 The desktop app does not register a service or require administrator access.
 Each Windows user gets an isolated SQLite database under their application-data
