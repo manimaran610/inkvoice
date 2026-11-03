@@ -51,7 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslation } from "@/i18n";
-import { isInvoiceFormEditable, STATUS_COLORS } from "@/lib/constants";
+import { STATUS_COLORS } from "@/lib/constants";
 import { formatApiError } from "@/lib/format-api-error";
 import { pushRecentlyViewed } from "@/lib/recently-viewed";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -325,11 +325,9 @@ export default function InvoiceView({ onBack }: Props) {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          {isInvoiceFormEditable(invoice.status) && (
-            <Button variant="outline" size="sm" onClick={() => navigate(`/invoices/${id}/edit`)}>
-              <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={() => navigate(`/invoices/${id}/edit`)}>
+            <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
+          </Button>
           <Button variant="outline" size="sm" onClick={handlePreview}>
             <Eye className="h-4 w-4 mr-1" /> {t("invoices.preview")}
           </Button>

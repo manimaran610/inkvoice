@@ -37,7 +37,7 @@ export const STATEMENT_TEMPLATE = `<!doctype html>
   <div class="header">
     <div>
       {{#company.logo}}<img class="logo" src="{{company.logo}}" alt="{{company.name}}" />{{/company.logo}}
-      {{^company.logo}}<div class="company-name">{{company.name}}</div>{{/company.logo}}
+      {{#company.name}}<div class="company-name">{{company.name}}</div>{{/company.name}}
       <div class="muted">
         {{#company.address}}{{{company.address}}}<br/>{{/company.address}}
         {{#company.email}}{{company.email}}<br/>{{/company.email}}

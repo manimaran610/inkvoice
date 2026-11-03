@@ -397,17 +397,16 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
   const db = getDb();
   const existing = db
     .query(
-      "SELECT id, status, cash_discount_type, cash_discount_value, cash_discount_days, use_tamil_product_names FROM invoices WHERE id = ?",
+      "SELECT id, cash_discount_type, cash_discount_value, cash_discount_days, use_tamil_product_names FROM invoices WHERE id = ?",
     )
     .get(id) as {
     id: string;
-    status: string;
     cash_discount_type: string | null;
     cash_discount_value: number;
     cash_discount_days: number;
     use_tamil_product_names: number;
   } | null;
-  if (!existing || existing.status !== "draft") return null;
+  if (!existing) return null;
 
   // Cash-discount fields are optional on update: a field the client leaves
   // out keeps its stored value (older clients and the mobile app do not send

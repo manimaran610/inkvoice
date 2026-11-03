@@ -36,6 +36,12 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
+if ("storage" in navigator && "persist" in navigator.storage) {
+  navigator.storage.persist().catch(() => {
+    // Persistence is optional; the application remains usable without it.
+  });
+}
+
 // Register the PWA service worker only in production builds; the dev server
 // hot-reloads modules, and a stale cache there causes more pain than offline
 // support is worth.

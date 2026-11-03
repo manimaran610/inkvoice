@@ -34,7 +34,6 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n";
-import { isInvoiceFormEditable } from "@/lib/constants";
 import { addDaysIso, todayIso } from "@/lib/date";
 import { formatApiError } from "@/lib/format-api-error";
 import { markRowHighlight } from "@/lib/highlight-row";
@@ -399,11 +398,6 @@ export default function InvoiceForm({ onSave }: Props) {
       setEditLoaded(false);
       api.getInvoice(id!).then((r) => {
         const inv = r.data;
-        if (!isInvoiceFormEditable(inv.status)) {
-          toast.error(t("invoices.invoice_not_editable"));
-          navigate(`/invoices/${id}`, { replace: true });
-          return;
-        }
         setForm({
           customer_id: inv.customer_id,
           invoice_number: inv.invoice_number,

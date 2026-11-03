@@ -8,7 +8,8 @@ import { seed } from "../database/seed";
 import { createCustomer } from "../services/customer.service";
 import { createInvoice, markSent } from "../services/invoice.service";
 import { recordPayment } from "../services/payment.service";
-import { buildStatementData } from "../services/statement.service";
+import { updateSettings } from "../services/settings.service";
+import { buildStatementData, renderStatementHtml } from "../services/statement.service";
 import { resetEnvCache } from "../utils/env";
 
 const TEST_DB = "./data/test-statements.db";
@@ -125,6 +126,21 @@ describe("statement balance math", () => {
 
   test("returns null for an unknown customer", () => {
     expect(buildStatementData("does-not-exist", "2026-01-01", "2026-12-31")).toBeNull();
+  });
+});
+
+describe("statement company branding", () => {
+  test("renders both the company logo and company name", () => {
+    updateSettings({
+      company_name: "Inkvoice Test Company",
+      company_logo: "logo-data",
+    });
+    const customer = createCustomer({ name: "Branding Customer" });
+
+    const html = renderStatementHtml(customer.id, "2026-01-01", "2026-12-31");
+
+    expect(html).toContain('<img class="logo" src="logo-data"');
+    expect(html).toContain('<div class="company-name">Inkvoice Test Company</div>');
   });
 });
 

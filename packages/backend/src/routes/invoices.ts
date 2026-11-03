@@ -301,7 +301,7 @@ invoices.put("/:id", requirePermission("invoices", "update"), async (c) => {
   const parsed = invoiceSchema.parse(body);
   const invoice = invoiceService.updateInvoice(c.req.param("id"), parsed);
   if (!invoice) {
-    return c.json({ success: false, error: "Invoice not found or not editable" }, 404);
+    return c.json({ success: false, error: "Invoice not found" }, 404);
   }
   return c.json({ success: true, data: invoice });
 });

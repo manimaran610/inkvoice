@@ -22,6 +22,33 @@ Always set a strong `JWT_SECRET` in production. The default is only suitable for
 
 The database is created automatically on first run. Back it up by copying this file.
 
+### Reset a local admin password
+
+`ADMIN_PASS` is used only when the database has no users; changing it later does not
+change an existing account's password. From the repository root, run:
+
+```bash
+bun run scripts/reset-password.ts admin
+```
+
+The command updates only that active admin account's password and prints a
+one-time temporary password. Log in with it and immediately change it. If the
+app uses a different database file, set `DATABASE_PATH` to that same file when
+running the command.
+
+## PWA offline storage
+
+The production frontend can be installed as a PWA. After a successful online
+login, the browser enrolls that user for password-based offline unlock. The
+password itself is never stored: a PBKDF2-derived AES-GCM verifier is kept in
+IndexedDB, together with the future offline data store.
+
+Offline enrollment is device-local and is not a replacement for server
+authentication. Clearing site data, private browsing storage, or browser
+eviction removes the enrollment. Browser persistent-storage permission is
+requested when available, but browsers may still evict data. Do not rely on
+the browser cache as the only business-data backup.
+
 ## Server
 
 | Variable | Default | Description |

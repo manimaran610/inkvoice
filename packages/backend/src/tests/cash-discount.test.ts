@@ -171,7 +171,7 @@ describe("cash discount on invoices", () => {
   });
 });
 
-describe("cash discount on draft edits", () => {
+describe("invoice edits", () => {
   const baseUpdate = (customerId: string) => ({
     customer_id: customerId,
     issue_date: "2026-01-01",
@@ -225,6 +225,19 @@ describe("cash discount on draft edits", () => {
     expect(updated.cash_discount_type).toBe("amount");
     expect(updated.cash_discount_value).toBe(15);
     expect(updated.cash_discount_days).toBe(7);
+  });
+
+  test("a sent invoice can be edited without changing its status", () => {
+    const customer = createCustomer({ name: "Sent Edit Co" });
+    const inv = makeInvoice(customer.id);
+    const updated = updateInvoice(inv.id, {
+      ...baseUpdate(customer.id),
+      notes: "Updated after sending",
+    });
+
+    expect(updated?.items[0].description).toBe("Work, revised");
+    expect(updated?.notes).toBe("Updated after sending");
+    expect(updated?.status).toBe("sent");
   });
 
   test("PUT /api/v1/invoices/:id keeps omitted fields and clears null ones", async () => {
