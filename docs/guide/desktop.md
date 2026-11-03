@@ -79,5 +79,6 @@ Windows MSVC cross-compilation toolchain), because the bundled sidecar is a
 Windows executable. The current development machine has no Rust toolchain, so
 it can validate the web bundle but cannot emit the `.exe` installer locally.
 
-The Windows icon is sourced from `packages/frontend/public/icon-192.png` and
-stored as `src-tauri/icons/icon.ico` for Tauri's Windows resource generation.
+The GitHub Actions workflow generates the Windows icon assets from the committed
+`packages/frontend/public/icon-512.png` before compiling Tauri. This keeps the
+build independent of untracked or locally generated icon files.
