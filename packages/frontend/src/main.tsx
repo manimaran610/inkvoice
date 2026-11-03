@@ -7,6 +7,7 @@ import "./styles/globals.css";
 import "@/registrations";
 import App from "./App";
 import { I18nProvider } from "./i18n/I18nProvider";
+import { syncOfflineMutations } from "./lib/offline-sync";
 
 // Optional Sentry wiring — only loads if VITE_SENTRY_DSN is set at build time.
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
@@ -36,6 +37,10 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
+window.addEventListener("online", () => {
+  syncOfflineMutations().catch(() => {});
+});
+
 if ("storage" in navigator && "persist" in navigator.storage) {
   navigator.storage.persist().catch(() => {
     // Persistence is optional; the application remains usable without it.
@@ -45,7 +50,11 @@ if ("storage" in navigator && "persist" in navigator.storage) {
 // Register the PWA service worker only in production builds; the dev server
 // hot-reloads modules, and a stale cache there causes more pain than offline
 // support is worth.
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+if (
+  import.meta.env.PROD &&
+  "serviceWorker" in navigator &&
+  !("__TAURI_INTERNALS__" in (window as object))
+) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       // Registration is best-effort: failures fall back to normal browsing.

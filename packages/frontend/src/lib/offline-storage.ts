@@ -225,3 +225,24 @@ export async function clearOfflineStorage(): Promise<void> {
 export async function saveOfflineUser(user: OfflineUser): Promise<void> {
   await writeState("offline-user", user);
 }
+
+export async function getOfflineValue<T>(key: string): Promise<T | null> {
+  const value = (await readState())[key];
+  return (value as T | undefined) ?? null;
+}
+
+export async function setOfflineValue(key: string, value: unknown): Promise<void> {
+  await writeState(key, value);
+}
+
+export async function getOfflineMutations(): Promise<OfflineMutation[]> {
+  return (await getOfflineValue<OfflineMutation[]>("offline-mutations")) || [];
+}
+
+export async function removeOfflineMutation(id: string): Promise<void> {
+  const mutations = await getOfflineMutations();
+  await setOfflineValue(
+    "offline-mutations",
+    mutations.filter((mutation) => mutation.id !== id),
+  );
+}

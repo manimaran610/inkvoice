@@ -11,6 +11,8 @@
     "dev:backend": "bun run --filter backend dev",
     "dev:frontend": "bun run --filter frontend dev",
     "build": "bun run --filter frontend build",
+    "desktop:dev": "bunx tauri dev",
+    "desktop:build": "bunx tauri build",
     "build:watch": "bun run --filter frontend build:watch",
     "dev:served": "bun run --filter backend dev & bun run --filter frontend build:watch",
     "test": "bun run --filter backend test",
@@ -26,7 +28,8 @@
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
     "lefthook": "^2.1.9",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "@tauri-apps/cli": "^2.9.0"
   },
   "license": "MIT"
 }

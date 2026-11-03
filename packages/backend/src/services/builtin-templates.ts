@@ -44,6 +44,9 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 export function readTemplateFile(filename: string): string {
   // templates/ is at project root, backend runs from packages/backend
   const paths = [
+    ...(process.env.INKVOICE_TEMPLATES_DIR
+      ? [join(process.env.INKVOICE_TEMPLATES_DIR, filename)]
+      : []),
     join(process.cwd(), "templates", filename),
     join(process.cwd(), "..", "..", "templates", filename),
     join(import.meta.dir, "..", "..", "..", "..", "templates", filename),

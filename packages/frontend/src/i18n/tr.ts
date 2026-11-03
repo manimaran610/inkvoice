@@ -66,6 +66,19 @@ const tr: TranslationKeys = {
     columns: "Sütunlar",
     toggle_columns: "Sütunları aç/kapa",
   },
+  sync: {
+    title: "Veri senkronizasyonu",
+    offline: "Çevrimdışı",
+    syncing: "Senkronize ediliyor...",
+    synced: "Senkronize",
+    pending: "{{count}} bekliyor",
+    products: "Ürünler",
+    customers: "Müşteriler",
+    invoices: "Faturalar",
+    last_sync: "Son senkronizasyon",
+    failed: "{{count}} başarısız",
+    sync_now: "Şimdi senkronize et",
+  },
 
   // Navigasyon / Kenar çubuğu
   nav: {

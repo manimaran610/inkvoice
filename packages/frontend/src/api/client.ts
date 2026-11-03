@@ -1,4 +1,5 @@
-const API_BASE = "/api/v1";
+const isTauriDesktop = typeof window !== "undefined" && "__TAURI_INTERNALS__" in (window as object);
+const API_BASE = isTauriDesktop ? "http://127.0.0.1:3789/api/v1" : "/api/v1";
 
 let authToken: string | null = null;
 let onUnauthorized: (() => void) | null = null;

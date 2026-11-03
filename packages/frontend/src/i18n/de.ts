@@ -71,6 +71,19 @@ const de: TranslationKeys = {
     columns: "Spalten",
     toggle_columns: "Spalten ein-/ausblenden",
   },
+  sync: {
+    title: "Datensynchronisierung",
+    offline: "Offline",
+    syncing: "Synchronisierung...",
+    synced: "Synchronisiert",
+    pending: "{{count}} ausstehend",
+    products: "Produkte",
+    customers: "Kunden",
+    invoices: "Rechnungen",
+    last_sync: "Letzte Synchronisierung",
+    failed: "{{count}} fehlgeschlagen",
+    sync_now: "Jetzt synchronisieren",
+  },
 
   // Navigation / Seitenleiste
   nav: {
