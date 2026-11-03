@@ -24,7 +24,7 @@ fn main() {
                 .env("PORT", "3789")
                 .env("DATABASE_PATH", database_path)
                 .env("ALLOWED_ORIGINS", "http://tauri.localhost,http://localhost")
-                .env("INKVOICE_TEMPLATES_DIR", templates_dir.to_string_lossy());
+                .env("INKVOICE_TEMPLATES_DIR", templates_dir);
             let (_receiver, _child) = sidecar.spawn()?;
 
             let window = app.get_webview_window("main").expect("main window");
