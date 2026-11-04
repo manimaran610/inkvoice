@@ -114,6 +114,7 @@ docker run -d --name inkvoice \
 ```
 
 Open **[http://localhost:3000](http://localhost:3000)** and log in with `admin` and the password you set.
+In a supported browser, use its **Install app** button/menu to install Inkvoice as a PWA. The app shell is cached for launch, while invoice and customer data continue to come from the local server.
 
 For local Compose deployment, copy `.env.example` to `.env`, set a strong `JWT_SECRET` and `ADMIN_PASS`, then run:
 

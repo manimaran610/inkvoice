@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   build: {
+    manifest: "offline-manifest.json",
     rollupOptions: {
       output: {
         manualChunks: {

@@ -1,0 +1,38 @@
+services:
+  app:
+    image: ghcr.io/manimaran610/inkvoice:latest
+    pull_policy: missing
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - invoice-data:/app/data
+    environment:
+      # Left empty so the app owns the defaults (admin/changeme, or demo/demo
+      # when DEMO_MODE=true). Set them in .env to override.
+      ADMIN_USER: ${ADMIN_USER:-}
+      ADMIN_PASS: ${ADMIN_PASS:-}
+      # Required. No fallback on purpose: a shipped default secret would be
+      # public knowledge. Generate one with: openssl rand -base64 48
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, minimum 32 characters}
+      DATABASE_PATH: /app/data/invoice.db
+      PORT: "3000"
+      HOST: 0.0.0.0
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_RESET_INTERVAL: ${DEMO_RESET_INTERVAL:-86400000}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      PEPPOL_SH_API_KEY: ${PEPPOL_SH_API_KEY:-}
+      PEPPOL_SH_WEBHOOK_SECRET: ${PEPPOL_SH_WEBHOOK_SECRET:-}
+      PEPPOL_SH_BASE_URL: ${PEPPOL_SH_BASE_URL:-https://api.peppol.sh}
+    restart: unless-stopped
+    # Bun sizes its heap to the memory it can see - keep this cap.
+    mem_limit: 512m
+
+volumes:
+  invoice-data:
