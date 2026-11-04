@@ -1,16 +1,28 @@
 /* Inkvoice service worker — minimal app-shell cache for offline read-only browsing. */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `inkvoice-shell-${VERSION}`;
 const ASSET_CACHE = `inkvoice-assets-${VERSION}`;
 const SHELL_URLS = ["/", "/index.html", "/favicon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_URLS))
-      .then(() => self.skipWaiting()),
+    (async () => {
+      const shell = await caches.open(SHELL_CACHE);
+      await shell.addAll(SHELL_URLS);
+      const manifestResponse = await fetch("/offline-manifest.json");
+      if (!manifestResponse.ok) throw new Error("Unable to load offline asset manifest");
+      const manifest = await manifestResponse.json();
+      const assets = new Set();
+      for (const entry of Object.values(manifest)) {
+        for (const file of [entry.file, ...(entry.css || []), ...(entry.assets || [])]) {
+          if (file) assets.add(file.startsWith("/") ? file : `/${file}`);
+        }
+      }
+      const cache = await caches.open(ASSET_CACHE);
+      await cache.addAll([...assets]);
+      await self.skipWaiting();
+    })(),
   );
 });
 
@@ -33,7 +45,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // API responses change per-tenant and can mutate at any time — never cache.
+  // API responses are cached by the authenticated frontend client, not here.
   if (url.pathname.startsWith("/api/") || url.pathname === "/health") return;
 
   // Hashed Vite assets are immutable: cache-first, populate on miss.

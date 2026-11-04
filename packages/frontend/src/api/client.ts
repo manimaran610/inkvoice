@@ -1,3 +1,10 @@
+import {
+  cacheApiResponse,
+  getCachedApiResponse,
+  queueOfflineMutation,
+  setOfflineCacheScope,
+} from "@/lib/offline-storage";
+
 const isTauriDesktop = typeof window !== "undefined" && "__TAURI_INTERNALS__" in (window as object);
 const API_BASE = isTauriDesktop ? "http://127.0.0.1:3789/api/v1" : "/api/v1";
 
@@ -27,6 +34,7 @@ export function setOnUpgradeRequired(callback: (message: string) => void) {
  * same machinery.
  */
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method || "GET").toUpperCase();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -39,11 +47,28 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    if (method === "GET") {
+      const cached = await getCachedApiResponse<T>(path);
+      if (cached !== null) return cached;
+    } else if (isOfflineQueueable(path, method)) {
+      await queueOfflineMutation({
+        method: method as "POST" | "PUT" | "DELETE",
+        path,
+        body: typeof options.body === "string" ? JSON.parse(options.body) : null,
+      });
+      window.dispatchEvent(new Event("inkvoice:sync-updated"));
+      throw new ApiError("Offline change queued", 0, undefined, "OFFLINE_QUEUED");
+    }
+    throw error;
+  }
 
   const ct = res.headers.get("content-type") || "";
   let data: {
@@ -87,7 +112,39 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     throw new ApiError(msg, res.status, data.errors, data.code);
   }
 
+  if (method === "GET" && res.ok && data.success) {
+    await cacheApiResponse(path, data);
+  }
+  if (path === "/auth/login" && data.data && typeof data.data === "object") {
+    const user = (data.data as { user?: { id?: string } }).user;
+    if (user?.id) setOfflineCacheScope(user.id);
+  } else if (path === "/auth/me" && data.data && typeof data.data === "object") {
+    const user = data.data as { id?: string };
+    if (user.id) setOfflineCacheScope(user.id);
+  }
   return data as T;
+}
+
+function isOfflineQueueable(path: string, method: string): boolean {
+  const segments = path.split("?")[0].split("/").filter(Boolean);
+  const root = segments[0];
+  if (
+    ![
+      "customers",
+      "products",
+      "invoices",
+      "quotes",
+      "expenses",
+      "tax-definitions",
+      "templates",
+      "recurring-invoices",
+    ].includes(root)
+  ) {
+    return false;
+  }
+  if (method === "POST") return segments.length === 1;
+  if (method === "PUT" || method === "DELETE") return segments.length <= 2;
+  return false;
 }
 
 export type ApiErrorCode =

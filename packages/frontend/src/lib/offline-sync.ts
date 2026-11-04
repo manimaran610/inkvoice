@@ -1,56 +1,63 @@
+import { getAuthToken } from "@/api/client";
 import {
   getOfflineMutations,
   getOfflineValue,
   removeOfflineMutation,
   setOfflineValue,
+  updateOfflineMutation,
 } from "@/lib/offline-storage";
 
 export async function syncOfflineMutations(): Promise<void> {
   if (!navigator.onLine) return;
-  const mutations = (await getOfflineMutations()).filter((item) => item.status === "pending");
-  if (mutations.length === 0) return;
-
-  const response = await fetch(
-    `${typeof window !== "undefined" && "__TAURI_INTERNALS__" in (window as object) ? "http://127.0.0.1:3789" : ""}/api/v1/sync/batch`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        operations: mutations.map((mutation) => {
-          const data = mutation.body as { id?: string };
-          return {
-            entity: mutation.path.startsWith("/invoices") ? "invoice" : "product",
-            client_id: data.id,
-            idempotency_key: mutation.id,
-            data: mutation.body,
-          };
-        }),
-      }),
-    },
-  );
-  if (!response.ok) throw new Error("Sync failed");
-
-  const payload = (await response.json()) as {
-    data?: { results?: { client_id: string; status: string; entity: string }[] };
-  };
-  const meta = (await getOfflineValue("offline-sync-meta")) as {
+  const mutations = (await getOfflineMutations())
+    .filter((item) => item.status === "pending")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const base =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in (window as object)
+      ? "http://127.0.0.1:3789"
+      : "";
+  for (const mutation of mutations) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getAuthToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    try {
+      const response = await fetch(`${base}/api/v1${mutation.path}`, {
+        method: mutation.method,
+        headers,
+        credentials: "include",
+        body: mutation.method === "DELETE" ? undefined : JSON.stringify(mutation.body),
+      });
+      if (response.ok) {
+        await removeOfflineMutation(mutation.id);
+      } else if (
+        response.status >= 400 &&
+        response.status < 500 &&
+        response.status !== 401 &&
+        response.status !== 403
+      ) {
+        const errorBody = (await response.json().catch(() => ({}))) as { error?: string };
+        await updateOfflineMutation(mutation.id, {
+          status: "failed",
+          error: errorBody.error || `Request failed (${response.status})`,
+        });
+      } else {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
+  const previous = await getOfflineValue<{
     lastSyncAt: string | null;
     products: number;
     customers: number;
     invoices: number;
-  } | null;
-  const next = meta || { lastSyncAt: null, products: 0, customers: 0, invoices: 0 };
-  for (const result of payload.data?.results || []) {
-    if (result.status === "failed") continue;
-    const mutation = mutations.find(
-      (item) => (item.body as { id?: string }).id === result.client_id,
-    );
-    if (mutation) await removeOfflineMutation(mutation.id);
-    if (result.entity === "product") next.products += 1;
-    if (result.entity === "invoice") next.invoices += 1;
-  }
-  next.lastSyncAt = new Date().toISOString();
-  await setOfflineValue("offline-sync-meta", next);
+  }>("offline-sync-meta");
+  await setOfflineValue("offline-sync-meta", {
+    lastSyncAt: new Date().toISOString(),
+    products: previous?.products || 0,
+    customers: previous?.customers || 0,
+    invoices: previous?.invoices || 0,
+  });
   window.dispatchEvent(new Event("inkvoice:sync-updated"));
 }

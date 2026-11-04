@@ -83,6 +83,7 @@ const de: TranslationKeys = {
     last_sync: "Letzte Synchronisierung",
     failed: "{{count}} fehlgeschlagen",
     sync_now: "Jetzt synchronisieren",
+    mutation_queued: "Offline gespeichert. Die Änderung wird nach der Verbindung synchronisiert.",
   },
 
   // Navigation / Seitenleiste
@@ -1499,6 +1500,11 @@ const de: TranslationKeys = {
   // Datumsbereichsfilter
   date_range: {
     all_time: "Gesamter Zeitraum",
+    today: "Heute",
+    yesterday: "Gestern",
+    last_3_days: "Letzte 3 Tage",
+    last_7_days: "Letzte 7 Tage",
+    last_30_days: "Letzte 30 Tage",
     this_month: "Dieser Monat",
     last_month: "Letzter Monat",
     this_quarter: "Dieses Quartal",

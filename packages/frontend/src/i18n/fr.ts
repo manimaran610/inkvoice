@@ -79,6 +79,8 @@ const fr: TranslationKeys = {
     last_sync: "Dernière synchronisation",
     failed: "{{count}} échoués",
     sync_now: "Synchroniser maintenant",
+    mutation_queued:
+      "Enregistré hors ligne. Cette modification sera synchronisée à la reconnexion.",
   },
 
   // Navigation / Barre latérale
@@ -1489,6 +1491,11 @@ const fr: TranslationKeys = {
   // Filtre de plage de dates
   date_range: {
     all_time: "Toute la période",
+    today: "Aujourd'hui",
+    yesterday: "Hier",
+    last_3_days: "3 derniers jours",
+    last_7_days: "7 derniers jours",
+    last_30_days: "30 derniers jours",
     this_month: "Ce mois-ci",
     last_month: "Le mois dernier",
     this_quarter: "Ce trimestre",

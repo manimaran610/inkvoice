@@ -40,6 +40,7 @@ createRoot(document.getElementById("root")!).render(
 window.addEventListener("online", () => {
   syncOfflineMutations().catch(() => {});
 });
+syncOfflineMutations().catch(() => {});
 
 if ("storage" in navigator && "persist" in navigator.storage) {
   navigator.storage.persist().catch(() => {

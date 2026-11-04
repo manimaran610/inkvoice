@@ -78,6 +78,7 @@ const tr: TranslationKeys = {
     last_sync: "Son senkronizasyon",
     failed: "{{count}} başarısız",
     sync_now: "Şimdi senkronize et",
+    mutation_queued: "Çevrimdışı kaydedildi. Yeniden bağlandığınızda eşitlenecek.",
   },
 
   // Navigasyon / Kenar çubuğu
@@ -1468,6 +1469,11 @@ const tr: TranslationKeys = {
   // Tarih aralığı filtresi
   date_range: {
     all_time: "Tüm zamanlar",
+    today: "Bugün",
+    yesterday: "Dün",
+    last_3_days: "Son 3 gün",
+    last_7_days: "Son 7 gün",
+    last_30_days: "Son 30 gün",
     this_month: "Bu ay",
     last_month: "Geçen ay",
     this_quarter: "Bu çeyrek",

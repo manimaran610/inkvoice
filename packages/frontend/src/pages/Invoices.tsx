@@ -27,7 +27,6 @@ import {
   type SortState,
   sortData,
 } from "@/components/shared/SortableColumnHeader";
-import { TagInput } from "@/components/shared/TagInput";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -78,8 +77,6 @@ export default function Invoices() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortState | null>(null);
   const [dateRange, setDateRange] = useState<{ from?: string; to?: string }>({});
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [batchAction, setBatchAction] = useState<{ action: string; label: string } | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
@@ -115,19 +112,15 @@ export default function Invoices() {
       if (customerIdFilter) params.customer_id = customerIdFilter;
       if (dateRange.from) params.from = dateRange.from;
       if (dateRange.to) params.to = dateRange.to;
-      if (tags.length > 0) params.tags = tags.join(",");
       const res = await api.listInvoices(params);
       setInvoices(res.data.items);
       setTotal(res.data.total);
     }
-  }, [page, search, statusFilter, customerIdFilter, isTrash, isCreditNotes, dateRange, tags]);
+  }, [page, search, statusFilter, customerIdFilter, isTrash, isCreditNotes, dateRange]);
 
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
-  useEffect(() => {
-    api.listTags().then((r) => setTagSuggestions(r.data.map((t) => t.name)));
-  }, []);
   useEffect(() => {
     setSelected(new Set());
   }, []);
@@ -225,7 +218,6 @@ export default function Invoices() {
       if (customerIdFilter) filters.customer_id = customerIdFilter;
       if (dateRange.from) filters.from = dateRange.from;
       if (dateRange.to) filters.to = dateRange.to;
-      if (tags.length > 0) filters.tags = tags.join(",");
 
       const firstPage = await api.listInvoices({ ...filters, page: "1", limit: "100" });
       const allInvoices = [...firstPage.data.items];
@@ -370,18 +362,20 @@ export default function Invoices() {
           {isTrash ? t("invoices.trash") : t("invoices.title")}
         </h1>
         {!isTrash && (
-          <div className="flex items-center gap-2">
-            <TagInput
-              value={tags}
-              onChange={(next) => {
-                setTags(next);
-                setPage(1);
-              }}
-              suggestions={tagSuggestions}
-              placeholder={t("tags.filter_placeholder")}
-              ariaLabel={t("tags.filter_placeholder")}
-              className="max-w-xs"
-            />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative w-64 sm:w-72 lg:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("invoices.search_placeholder")}
+                aria-label={t("common.search")}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="h-10 pl-9"
+              />
+            </div>
             <DateRangeFilter
               value={dateRange}
               onChange={(r) => {
@@ -402,7 +396,6 @@ export default function Invoices() {
                 if (customerIdFilter) params.customer_id = customerIdFilter;
                 if (dateRange.from) params.from = dateRange.from;
                 if (dateRange.to) params.to = dateRange.to;
-                if (tags.length > 0) params.tags = tags.join(",");
                 window.open(api.exportCsvUrl("invoices", params), "_blank");
               }}
             >
@@ -419,7 +412,7 @@ export default function Invoices() {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div>
         <Tabs value={statusFilter} onValueChange={(v) => navigate(`/invoices/${v}`)}>
           <TabsList>
             <TabsTrigger value="all">{t("invoices.tab_all")}</TabsTrigger>
@@ -438,23 +431,6 @@ export default function Invoices() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        {!isTrash && (
-          <div className="flex items-center gap-3">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("invoices.search_placeholder")}
-                aria-label={t("common.search")}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {customerNameFilter && !isTrash && (

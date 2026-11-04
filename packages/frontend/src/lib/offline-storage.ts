@@ -3,6 +3,8 @@ const DB_VERSION = 1;
 const STORE = "state";
 const ENCRYPTION_ITERATIONS = 310_000;
 
+let offlineEncryptionKey: CryptoKey | null = null;
+
 type StoredState = {
   key: string;
   value: unknown;
@@ -26,6 +28,50 @@ export type OfflineMutation = {
   status: "pending" | "failed";
   error?: string;
 };
+
+let offlineCacheScope = "anonymous";
+
+export function setOfflineCacheScope(userId: string): void {
+  offlineCacheScope = userId;
+}
+
+export async function getCachedApiResponse<T>(path: string): Promise<T | null> {
+  const cached = await getOfflineValue<EncryptedOfflineValue>(
+    `api-cache:${offlineCacheScope}:${path}`,
+  );
+  return cached ? decryptOfflineValue<T>(cached) : null;
+}
+
+export async function cacheApiResponse(path: string, value: unknown): Promise<void> {
+  if (!offlineEncryptionKey) return;
+  await setOfflineValue(`api-cache:${offlineCacheScope}:${path}`, await encryptOfflineValue(value));
+}
+
+export async function queueOfflineMutation(
+  mutation: Omit<OfflineMutation, "id" | "createdAt" | "status">,
+): Promise<void> {
+  const mutations = await getOfflineMutations();
+  mutations.push({
+    ...mutation,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    status: "pending",
+  });
+  await setOfflineValue("offline-mutations", await encryptOfflineValue(mutations));
+}
+
+export async function updateOfflineMutation(
+  id: string,
+  update: Pick<OfflineMutation, "status" | "error">,
+): Promise<void> {
+  const mutations = await getOfflineMutations();
+  await setOfflineValue(
+    "offline-mutations",
+    await encryptOfflineValue(
+      mutations.map((mutation) => (mutation.id === id ? { ...mutation, ...update } : mutation)),
+    ),
+  );
+}
 
 export type OfflineBackup = {
   version: 1;
@@ -130,6 +176,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
 export async function enrollOfflineUser(user: OfflineUser, password: string): Promise<void> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await deriveKey(password, salt);
+  offlineEncryptionKey = key;
   const verifier = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: asBufferSource(new Uint8Array(12)) },
     key,
@@ -154,6 +201,7 @@ export async function unlockOfflineUser(password: string): Promise<OfflineUser |
       key,
       asBufferSource(base64ToBytes(state.verifier)),
     );
+    offlineEncryptionKey = key;
     return state.user;
   } catch {
     return null;
@@ -236,13 +284,49 @@ export async function setOfflineValue(key: string, value: unknown): Promise<void
 }
 
 export async function getOfflineMutations(): Promise<OfflineMutation[]> {
-  return (await getOfflineValue<OfflineMutation[]>("offline-mutations")) || [];
+  const value = await getOfflineValue<OfflineMutation[] | EncryptedOfflineValue>(
+    "offline-mutations",
+  );
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return (await decryptOfflineValue<OfflineMutation[]>(value)) || [];
 }
 
 export async function removeOfflineMutation(id: string): Promise<void> {
   const mutations = await getOfflineMutations();
   await setOfflineValue(
     "offline-mutations",
-    mutations.filter((mutation) => mutation.id !== id),
+    await encryptOfflineValue(mutations.filter((mutation) => mutation.id !== id)),
   );
+}
+
+type EncryptedOfflineValue = { encrypted: true; iv: string; value: string };
+
+async function encryptOfflineValue(value: unknown): Promise<EncryptedOfflineValue> {
+  if (!offlineEncryptionKey) throw new Error("Offline storage is locked");
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: asBufferSource(iv) },
+    offlineEncryptionKey,
+    new TextEncoder().encode(JSON.stringify(value)),
+  );
+  return {
+    encrypted: true,
+    iv: bytesToBase64(iv),
+    value: bytesToBase64(new Uint8Array(encrypted)),
+  };
+}
+
+async function decryptOfflineValue<T>(value: EncryptedOfflineValue): Promise<T | null> {
+  if (!offlineEncryptionKey) return null;
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: asBufferSource(base64ToBytes(value.iv)) },
+      offlineEncryptionKey,
+      asBufferSource(base64ToBytes(value.value)),
+    );
+    return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  } catch {
+    return null;
+  }
 }

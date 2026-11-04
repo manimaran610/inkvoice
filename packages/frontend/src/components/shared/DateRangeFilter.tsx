@@ -1,9 +1,12 @@
 import {
+  endOfDay,
   endOfMonth,
   endOfQuarter,
   format,
+  startOfDay,
   startOfMonth,
   startOfQuarter,
+  subDays,
   subMonths,
   subQuarters,
 } from "date-fns";
@@ -39,6 +42,46 @@ const fmt = (d: Date) => format(d, "yyyy-MM-dd");
 function makePresets(t: (key: string) => string, fiscalStartMonth: number) {
   return [
     { value: "all", label: t("date_range.all_time"), range: () => ({}) as DateRange },
+    {
+      value: "today",
+      label: t("date_range.today"),
+      range: () => {
+        const now = new Date();
+        return { from: fmt(startOfDay(now)), to: fmt(endOfDay(now)) };
+      },
+    },
+    {
+      value: "yesterday",
+      label: t("date_range.yesterday"),
+      range: () => {
+        const yesterday = subDays(new Date(), 1);
+        return { from: fmt(startOfDay(yesterday)), to: fmt(endOfDay(yesterday)) };
+      },
+    },
+    {
+      value: "last-3-days",
+      label: t("date_range.last_3_days"),
+      range: () => {
+        const now = new Date();
+        return { from: fmt(startOfDay(subDays(now, 2))), to: fmt(endOfDay(now)) };
+      },
+    },
+    {
+      value: "last-7-days",
+      label: t("date_range.last_7_days"),
+      range: () => {
+        const now = new Date();
+        return { from: fmt(startOfDay(subDays(now, 6))), to: fmt(endOfDay(now)) };
+      },
+    },
+    {
+      value: "last-30-days",
+      label: t("date_range.last_30_days"),
+      range: () => {
+        const now = new Date();
+        return { from: fmt(startOfDay(subDays(now, 29))), to: fmt(endOfDay(now)) };
+      },
+    },
     {
       value: "this-month",
       label: t("date_range.this_month"),

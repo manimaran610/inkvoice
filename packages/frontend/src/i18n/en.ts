@@ -76,6 +76,7 @@ const en = {
     last_sync: "Last sync",
     failed: "{{count}} failed",
     sync_now: "Sync now",
+    mutation_queued: "Saved offline. This change will sync when you reconnect.",
   },
 
   // Navigation / Sidebar
@@ -1466,6 +1467,11 @@ const en = {
   // Date range filter
   date_range: {
     all_time: "All time",
+    today: "Today",
+    yesterday: "Yesterday",
+    last_3_days: "Last 3 days",
+    last_7_days: "Last 7 days",
+    last_30_days: "Last 30 days",
     this_month: "This month",
     last_month: "Last month",
     this_quarter: "This quarter",

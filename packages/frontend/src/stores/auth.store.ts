@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { ApiError, api, setAuthToken, setOnUnauthorized } from "@/api/client";
-import { enrollOfflineUser, saveOfflineUser, unlockOfflineUser } from "@/lib/offline-storage";
+import {
+  enrollOfflineUser,
+  saveOfflineUser,
+  setOfflineCacheScope,
+  unlockOfflineUser,
+} from "@/lib/offline-storage";
 
 interface User {
   id: string;
@@ -43,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => {
         setAuthToken(token);
         await enrollOfflineUser(user, password);
         await saveOfflineUser(user);
+        setOfflineCacheScope(user.id);
         set({ user, token, isLoading: false });
       } catch (error) {
         const isNetworkFailure =
@@ -52,6 +58,7 @@ export const useAuthStore = create<AuthState>((set) => {
         if (!offlineUser || offlineUser.username !== username) {
           throw error;
         }
+        setOfflineCacheScope(offlineUser.id);
         set({ user: offlineUser, token: null, isLoading: false });
       }
     },
