@@ -128,6 +128,17 @@ The checked-in `docker-compose.yml` pulls the GHCR image, persists the database 
 
 After the image has been pulled once, the app and its SQLite data run locally without internet. Keep Docker Desktop set to start when you sign in to Windows/macOS; `restart: unless-stopped` starts the container again with Docker. Email, online payments, exchange-rate lookups, SSO, and PEPPOL require internet and their respective provider settings. No Google Sheets sync or device/cloud sync is part of this local setup.
 
+### Windows IIS (no Docker)
+
+On a 64-bit Windows PC, open PowerShell **as Administrator** in a folder where you want the installer script, then run:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/manimaran610/inkvoice/main/scripts/install-windows-iis.ps1 -OutFile install-inkvoice.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\install-inkvoice.ps1
+```
+
+The script installs IIS, URL Rewrite, ARR, and Bun; downloads and builds Inkvoice; then configures IIS on loopback only at `http://localhost:8088`. It stores the SQLite database under `%ProgramData%\Inkvoice\data` and registers the backend to start at Windows startup. The generated admin password is printed during setup, and backend output is saved to `%ProgramData%\Inkvoice\server.log`. The first setup needs internet; afterward the app itself runs locally. The PWA can be installed from the localhost address, but its API still requires the local backend to be running.
+
 > **Keep the 512 MB cap.** Bun sizes its heap to the memory it can see, so the cap is what keeps
 > Inkvoice in its usual ~60 MB working set. Measured on a fresh install: **62 MB** capped at 512 MB,
 > versus **118 MB** uncapped.
