@@ -64,20 +64,6 @@ const en = {
     columns: "Columns",
     toggle_columns: "Toggle columns",
   },
-  sync: {
-    title: "Data sync",
-    offline: "Offline",
-    syncing: "Syncing...",
-    synced: "Synced",
-    pending: "{{count}} pending",
-    products: "Products",
-    customers: "Customers",
-    invoices: "Invoices",
-    last_sync: "Last sync",
-    failed: "{{count}} failed",
-    sync_now: "Sync now",
-    mutation_queued: "Saved offline. This change will sync when you reconnect.",
-  },
 
   // Navigation / Sidebar
   nav: {

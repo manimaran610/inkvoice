@@ -13,41 +13,26 @@ openssl rand -base64 48
 Inkvoice refuses to start in production without `JWT_SECRET`, and it must be at
 least 32 characters. Keep the output for the next step.
 
-### 2. Create a `docker-compose.yml`
+### 2. Configure the repository's Compose file
 
-```yaml
-services:
-  app:
-    image: ghcr.io/pigontech/inkvoice:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - invoice-data:/app/data
-    environment:
-      ADMIN_USER: admin
-      ADMIN_PASS: pick-a-strong-password
-      JWT_SECRET: paste-the-openssl-output-here
-      # Serving over plain HTTP? Keep this false. It defaults to true, which
-      # marks the session cookie Secure, and browsers then drop it on any
-      # non-HTTPS address other than localhost, so logins silently fail.
-      COOKIE_SECURE: "false"
-    restart: unless-stopped
-    # Bun sizes its heap to the memory it can see, so keep this cap.
-    mem_limit: 512m
-
-volumes:
-  invoice-data:
+```bash
+cp .env.example .env
 ```
+
+Set `ADMIN_PASS` and paste the generated secret into `JWT_SECRET` in `.env`.
 
 ### 3. Start it
 
 ```bash
+docker compose pull
 docker compose up -d
 ```
 
 ### 4. Open the app
 
 Navigate to [http://localhost:3000](http://localhost:3000) and log in with the credentials you set above.
+
+After the image is downloaded, Inkvoice and its database run locally without internet. Docker Desktop must be configured to start on login for the container to resume after a PC restart. Email, online payments, exchange-rate lookups, SSO, and PEPPOL need internet access.
 
 ::: tip
 Putting this on the public internet? Terminate TLS in front of it, then switch to

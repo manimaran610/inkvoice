@@ -47,7 +47,7 @@ docker run -d \
   -e ADMIN_USER=admin \
   -e ADMIN_PASS=your-strong-password \
   -e JWT_SECRET=your-random-secret-at-least-32-chars \
-  ghcr.io/pigontech/inkvoice:latest
+  ghcr.io/manimaran610/inkvoice:latest
 ```
 
 ## Reverse Proxy

@@ -1,11 +1,5 @@
 import { create } from "zustand";
-import { ApiError, api, setAuthToken, setOnUnauthorized } from "@/api/client";
-import {
-  enrollOfflineUser,
-  saveOfflineUser,
-  setOfflineCacheScope,
-  unlockOfflineUser,
-} from "@/lib/offline-storage";
+import { api, setAuthToken, setOnUnauthorized } from "@/api/client";
 
 interface User {
   id: string;
@@ -42,25 +36,10 @@ export const useAuthStore = create<AuthState>((set) => {
     isLoading: true,
 
     login: async (username: string, password: string) => {
-      try {
-        const res = await api.login(username, password);
-        const { token, user } = res.data;
-        setAuthToken(token);
-        await enrollOfflineUser(user, password);
-        await saveOfflineUser(user);
-        setOfflineCacheScope(user.id);
-        set({ user, token, isLoading: false });
-      } catch (error) {
-        const isNetworkFailure =
-          !navigator.onLine || !(error instanceof ApiError) || error.status === 0;
-        if (!isNetworkFailure) throw error;
-        const offlineUser = await unlockOfflineUser(password);
-        if (!offlineUser || offlineUser.username !== username) {
-          throw error;
-        }
-        setOfflineCacheScope(offlineUser.id);
-        set({ user: offlineUser, token: null, isLoading: false });
-      }
+      const res = await api.login(username, password);
+      const { token, user } = res.data;
+      setAuthToken(token);
+      set({ user, token, isLoading: false });
     },
 
     logout: async () => {

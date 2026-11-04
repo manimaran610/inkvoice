@@ -22,6 +22,6 @@ Live star history (reconstructed from the stargazer timeline by star-history.com
 
 ## Docker pulls
 
-Images publish to GHCR (`ghcr.io/pigontech/inkvoice`), which does **not** expose
+Images publish to GHCR (`ghcr.io/manimaran610/inkvoice`), which does **not** expose
 a public pull-count API, so pull counts aren't tracked here. If images are ever
 mirrored to Docker Hub, add its `pull_count` to the snapshot.

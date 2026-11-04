@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCommandPalette } from "@/components/CommandPalette";
 import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
-import { SyncStatus } from "@/components/layout/SyncStatus";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -170,7 +169,6 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             </DropdownMenu>
 
             <NotificationsDropdown />
-            <SyncStatus />
           </div>
         </div>
       </div>

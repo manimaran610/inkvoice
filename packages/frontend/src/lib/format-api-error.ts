@@ -14,8 +14,6 @@ export function formatApiError(err: unknown, t: TFunction): string {
   if (err instanceof ApiError) {
     // Code-based resolution (preferred — backend tells us what went wrong)
     switch (err.code) {
-      case "OFFLINE_QUEUED":
-        return t("sync.mutation_queued");
       case "UNAUTHORIZED":
         return t("common.error_session_expired");
       case "FORBIDDEN":

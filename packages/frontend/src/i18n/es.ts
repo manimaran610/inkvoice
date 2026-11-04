@@ -67,20 +67,6 @@ const es: TranslationKeys = {
     columns: "Columnas",
     toggle_columns: "Mostrar u ocultar columnas",
   },
-  sync: {
-    title: "Sincronización de datos",
-    offline: "Sin conexión",
-    syncing: "Sincronizando...",
-    synced: "Sincronizado",
-    pending: "{{count}} pendientes",
-    products: "Productos",
-    customers: "Clientes",
-    invoices: "Facturas",
-    last_sync: "Última sincronización",
-    failed: "{{count}} fallidos",
-    sync_now: "Sincronizar ahora",
-    mutation_queued: "Guardado sin conexión. Se sincronizará al reconectarte.",
-  },
 
   // Navegación / barra lateral
   nav: {

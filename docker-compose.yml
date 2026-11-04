@@ -1,10 +1,9 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    expose:
-      - "3000"
+    image: ghcr.io/manimaran610/inkvoice:latest
+    pull_policy: missing
+    ports:
+      - "127.0.0.1:3000:3000"
     volumes:
       - invoice-data:/app/data
     environment:

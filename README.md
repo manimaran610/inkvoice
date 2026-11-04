@@ -101,7 +101,7 @@ Inkvoice is a lightweight, **self-hosted** invoicing dashboard for people who'd 
 
 ### Docker (recommended)
 
-Inkvoice ships as a **prebuilt multi-arch image** (`linux/amd64` + `linux/arm64`), so there's nothing to clone and nothing to build:
+Inkvoice publishes a **multi-arch image** (`linux/amd64` + `linux/arm64`) to GitHub Container Registry:
 
 ```bash
 docker run -d --name inkvoice \
@@ -110,37 +110,29 @@ docker run -d --name inkvoice \
   --memory 512m \
   -e JWT_SECRET="$(openssl rand -base64 48)" \
   -e ADMIN_PASS="change-me-please" \
-  ghcr.io/pigontech/inkvoice:latest
+  ghcr.io/manimaran610/inkvoice:latest
 ```
 
 Open **[http://localhost:3000](http://localhost:3000)** and log in with `admin` and the password you set.
 
-Prefer Compose? Save this as `docker-compose.yml` and run `docker compose up -d`:
+For local Compose deployment, copy `.env.example` to `.env`, set a strong `JWT_SECRET` and `ADMIN_PASS`, then run:
 
-```yaml
-services:
-  app:
-    image: ghcr.io/pigontech/inkvoice:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - invoice-data:/app/data
-    mem_limit: 512m
-    environment:
-      JWT_SECRET: change-this-to-a-random-string-of-at-least-32-chars
-      ADMIN_PASS: change-me-please
-    restart: unless-stopped
-
-volumes:
-  invoice-data:
+```bash
+cp .env.example .env
+docker compose pull
+docker compose up -d
 ```
+
+The checked-in `docker-compose.yml` pulls the GHCR image, persists the database in a Docker volume, and restarts the app unless explicitly stopped. Enable Docker Desktop's startup-on-login option for it to resume after a PC restart. After the first image push, set the GitHub package visibility to **Public** (or authenticate Docker with `ghcr.io`) so Compose can pull it.
+
+After the image has been pulled once, the app and its SQLite data run locally without internet. Keep Docker Desktop set to start when you sign in to Windows/macOS; `restart: unless-stopped` starts the container again with Docker. Email, online payments, exchange-rate lookups, SSO, and PEPPOL require internet and their respective provider settings. No Google Sheets sync or device/cloud sync is part of this local setup.
 
 > **Keep the 512 MB cap.** Bun sizes its heap to the memory it can see, so the cap is what keeps
 > Inkvoice in its usual ~60 MB working set. Measured on a fresh install: **62 MB** capped at 512 MB,
 > versus **118 MB** uncapped.
 >
 > **Image tags:** `latest` tracks `main`. For a stable deployment, pin a release tag such as
-> `ghcr.io/pigontech/inkvoice:0.3.1`.
+> `ghcr.io/manimaran610/inkvoice:0.3.1`.
 >
 > **Going public?** Put it behind HTTPS and add `-e COOKIE_SECURE=true -e ENABLE_HSTS=true`.
 > Staying on plain HTTP? Add `-e COOKIE_SECURE=false`. It defaults to true, which marks the

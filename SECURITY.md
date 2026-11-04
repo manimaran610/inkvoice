@@ -6,7 +6,7 @@ security reports seriously and appreciate responsible disclosure.
 ## Supported versions
 
 Security fixes land on `main` and ship in the next release and the
-`ghcr.io/pigontech/inkvoice:latest` Docker image. Only the latest release is supported —
+`ghcr.io/manimaran610/inkvoice:latest` Docker image. Only the latest release is supported —
 please keep your deployment up to date.
 
 ## Reporting a vulnerability
