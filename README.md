@@ -137,7 +137,17 @@ Invoke-WebRequest https://raw.githubusercontent.com/manimaran610/inkvoice/main/s
 powershell.exe -ExecutionPolicy Bypass -File .\install-inkvoice.ps1
 ```
 
-The script installs IIS, URL Rewrite, ARR, and Bun; downloads and builds Inkvoice; then configures IIS on loopback only at `http://localhost:8088`. It stores the SQLite database under `%ProgramData%\Inkvoice\data` and registers the backend to start at Windows startup. The generated admin password is printed during setup, and backend output is saved to `%ProgramData%\Inkvoice\server.log`. The first setup needs internet; afterward the app itself runs locally. The PWA can be installed from the localhost address, but its API still requires the local backend to be running.
+The installer stops and cleans up an earlier Inkvoice deployment before replacing its application files. It preserves the database and settings, then checks the backend and IIS `/health` endpoint before reporting success. The SQLite database is under `%ProgramData%\Inkvoice\data`, and backend output is saved to `%ProgramData%\Inkvoice\server.log`.
+
+If a previous run left files locked or inaccessible, run the cleanup script in elevated PowerShell, then rerun the installer. Cleanup removes only the old app, Bun executable, IIS site, and startup task; it preserves the database, settings, and log:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/manimaran610/inkvoice/main/scripts/cleanup-windows-iis.ps1 -OutFile cleanup-inkvoice.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\cleanup-inkvoice.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\install-inkvoice.ps1
+```
+
+The generated admin password is printed after health checks pass. The first setup needs internet; afterward the app itself runs locally. The PWA can be installed from the localhost address, but its API still requires the local backend to be running.
 
 > **Keep the 512 MB cap.** Bun sizes its heap to the memory it can see, so the cap is what keeps
 > Inkvoice in its usual ~60 MB working set. Measured on a fresh install: **62 MB** capped at 512 MB,
