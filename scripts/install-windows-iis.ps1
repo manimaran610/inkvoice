@@ -63,6 +63,34 @@ function Repair-DeploymentPathPermissions([string]$Path) {
   }
 }
 
+function Repair-BunDirectoryPermissions([string]$Path) {
+  New-Item -ItemType Directory -Force -Path $Path | Out-Null
+  & takeown.exe /F $Path /A /R /D Y | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Could not take ownership of '$Path'. Run the installer from an elevated PowerShell window."
+  }
+  & icacls.exe $Path /reset /T /C | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Could not reset stale permissions on '$Path'. Run cleanup-windows-iis.ps1 as Administrator, then rerun the installer."
+  }
+  & icacls.exe $Path /inheritance:e /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Could not grant SYSTEM and Administrators access to '$Path'."
+  }
+
+  $probePath = Join-Path $Path (".inkvoice-write-test-{0}" -f [Guid]::NewGuid().ToString("N"))
+  try {
+    [IO.File]::WriteAllText($probePath, "write test")
+  } catch {
+    $acl = & icacls.exe $Path 2>&1 | Out-String
+    throw "The installer still cannot write to '$Path'. Run cleanup-windows-iis.ps1 from an elevated PowerShell window. Current permissions: $($acl.Trim()) Original error: $($_.Exception.Message)"
+  } finally {
+    if (Test-Path $probePath) {
+      Remove-Item $probePath -Force -ErrorAction Stop
+    }
+  }
+}
+
 Assert-Administrator
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -109,8 +137,8 @@ if (Get-Module -ListAvailable -Name WebAdministration) {
 }
 Stop-InstalledBunProcess $bunExe
 Repair-DeploymentPathPermissions $appRoot
-Repair-DeploymentPathPermissions $binRoot
 Repair-DeploymentPathPermissions $siteRoot
+Repair-BunDirectoryPermissions $binRoot
 
 Write-Host "Removing previous application files (database and settings are preserved)..."
 foreach ($oldPath in @($appRoot, $bunExe)) {
@@ -180,7 +208,8 @@ try {
   Unblock-File -Path $bunSource.FullName
   Copy-Item $bunSource.FullName $bunExe -Force -ErrorAction Stop
 } catch {
-  throw "Could not install bun.exe to '$bunExe'. The file may still be locked or denied by Windows. Download cleanup-windows-iis.ps1 from the Inkvoice repository, run it as Administrator, then rerun this installer. Original error: $($_.Exception.Message)"
+  $acl = & icacls.exe $binRoot 2>&1 | Out-String
+  throw "Could not install bun.exe to '$bunExe'. Windows denied writing to the destination. Run cleanup-windows-iis.ps1 as Administrator and rerun the latest installer. Destination permissions: $($acl.Trim()) Original error: $($_.Exception.Message)"
 }
 try {
   Unblock-File -Path $bunExe

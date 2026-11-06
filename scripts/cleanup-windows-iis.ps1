@@ -20,9 +20,13 @@ function Repair-CleanupPathPermissions([string]$Path) {
   if ($LASTEXITCODE -ne 0) {
     throw "Could not take ownership of '$Path'."
   }
-  & icacls.exe $Path /grant "*S-1-5-32-544:(OI)(CI)F" /T /C | Out-Null
+  & icacls.exe $Path /reset /T /C | Out-Null
   if ($LASTEXITCODE -ne 0) {
-    throw "Could not grant Administrators access to '$Path'."
+    throw "Could not reset stale permissions on '$Path'."
+  }
+  & icacls.exe $Path /inheritance:e /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Could not grant SYSTEM and Administrators access to '$Path'."
   }
 }
 
