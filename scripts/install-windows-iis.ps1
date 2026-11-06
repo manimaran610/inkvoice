@@ -36,6 +36,15 @@ function New-RandomSecret([int]$ByteCount) {
   return [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 }
 
+function Stop-InstalledBunProcess([string]$Path) {
+  $fullPath = [IO.Path]::GetFullPath($Path)
+  $processes = Get-CimInstance -ClassName Win32_Process -Filter "Name = 'bun.exe'" |
+    Where-Object { $_.ExecutablePath -ieq $fullPath }
+  foreach ($process in $processes) {
+    Stop-Process -Id $process.ProcessId -Force -ErrorAction Stop
+  }
+}
+
 Assert-Administrator
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -53,11 +62,13 @@ $runnerPath = Join-Path $InstallRoot "run-inkvoice.ps1"
 $taskName = "Inkvoice Local Server"
 $siteName = "InkvoiceLocal"
 $appcmd = Join-Path $env:windir "System32\inetsrv\appcmd.exe"
+$bunExe = Join-Path $binRoot "bun.exe"
 
 New-Item -ItemType Directory -Force -Path $InstallRoot, $dataRoot, $binRoot, $siteRoot | Out-Null
 if (Get-ScheduledTask -TaskName "Inkvoice Local Server" -ErrorAction SilentlyContinue) {
   Stop-ScheduledTask -TaskName "Inkvoice Local Server" -ErrorAction SilentlyContinue
 }
+Stop-InstalledBunProcess $bunExe
 
 $iisFeatures = @(
   "IIS-WebServerRole",
@@ -100,7 +111,6 @@ if (-not $sourceRoot) {
   throw "Could not find the Inkvoice source in the downloaded archive."
 }
 
-$bunExe = Join-Path $binRoot "bun.exe"
 Write-Host "Downloading Bun for Windows..."
 $bunZip = Join-Path $env:TEMP "bun-windows-x64.zip"
 $bunTemp = Join-Path $env:TEMP "bun-windows-x64"
