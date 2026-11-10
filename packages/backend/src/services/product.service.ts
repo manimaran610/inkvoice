@@ -7,13 +7,15 @@ interface ProductListParams {
   category?: string;
   active?: string;
   search?: string;
+  customerId?: string;
+  unit?: string;
   page: number;
   limit: number;
 }
 
 export function listProducts(params: ProductListParams): PaginatedResponse<Product> {
   const db = getDb();
-  const { category, active, search, page, limit } = params;
+  const { category, active, search, customerId, unit, page, limit } = params;
   const offset = (page - 1) * limit;
   const conditions: string[] = [];
   const queryParams: (string | number)[] = [];
@@ -36,9 +38,22 @@ export function listProducts(params: ProductListParams): PaginatedResponse<Produ
   const countRow = db
     .query(`SELECT COUNT(*) as count FROM products ${where}`)
     .get(...queryParams) as { count: number };
-  const items = db
-    .query(`SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-    .all(...queryParams, limit, offset) as Product[];
+  const items = customerId
+    ? (db
+        .query(
+          `SELECT p.*, cp.unit_price as customer_unit_price
+           FROM products p
+           LEFT JOIN customer_product_prices cp
+             ON cp.product_id = p.id AND cp.customer_id = ?
+             AND cp.unit = COALESCE(?, p.unit)
+           ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+        )
+        .all(customerId, unit ?? null, ...queryParams, limit, offset) as Product[])
+    : (db
+        .query(
+          `SELECT *, NULL as customer_unit_price FROM products ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        )
+        .all(...queryParams, limit, offset) as Product[]);
 
   return {
     items,
@@ -87,9 +102,23 @@ export function listProductsForExport(params: {
     .all(...queryParams) as ProductExportRow[];
 }
 
-export function getProduct(id: string): Product | null {
+export function getProduct(id: string, customerId?: string, unit?: string): Product | null {
   const db = getDb();
-  return db.query("SELECT * FROM products WHERE id = ?").get(id) as Product | null;
+  if (customerId) {
+    return db
+      .query(
+        `SELECT p.*, cp.unit_price as customer_unit_price
+         FROM products p
+         LEFT JOIN customer_product_prices cp
+           ON cp.product_id = p.id AND cp.customer_id = ?
+           AND cp.unit = COALESCE(?, p.unit)
+         WHERE p.id = ?`,
+      )
+      .get(customerId, unit ?? null, id) as Product | null;
+  }
+  return db
+    .query("SELECT *, NULL as customer_unit_price FROM products WHERE id = ?")
+    .get(id) as Product | null;
 }
 
 export function createProduct(data: Partial<Product>): Product {

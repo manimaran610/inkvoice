@@ -470,6 +470,7 @@ const en = {
     tamil_name_hint: "Auto-filled from the English or Tanglish name. You can edit it.",
     sku: "SKU",
     unit_price: "Unit Price",
+    price_customer: "Pricing customer",
     unit: "Unit",
     category: "Category",
     status: "Status",

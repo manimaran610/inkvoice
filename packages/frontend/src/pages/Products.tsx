@@ -1,4 +1,14 @@
-import { Download, Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload } from "lucide-react";
+import {
+  Download,
+  Package,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,9 +38,13 @@ import { isRecordId } from "@/lib/record-id";
 import { cn, formatCurrency } from "@/lib/utils";
 import ProductForm from "@/pages/ProductForm";
 
+type ProductUnit = { id: string; name: string; symbol: string | null };
+
 export default function Products() {
   const { t } = useTranslation();
   const [products, setProducts] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customerId, setCustomerId] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -40,7 +54,10 @@ export default function Products() {
     id: null,
   });
   const [editingPrices, setEditingPrices] = useState(false);
-  const [priceEdits, setPriceEdits] = useState<Record<string, number>>({});
+  const [priceEdits, setPriceEdits] = useState<
+    Record<string, { unit_price: number; unit: string }>
+  >({});
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const navigate = useNavigate();
@@ -52,18 +69,26 @@ export default function Products() {
   const fetchProducts = useCallback(async () => {
     const params: Record<string, string> = { page: String(page), limit: "20" };
     if (search) params.search = search;
+    if (customerId) params.customer_id = customerId;
     const res = await api.listProducts(params);
     setProducts(res.data.items);
     setTotal(res.data.total);
-  }, [page, search]);
+  }, [page, search, customerId]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
   useEffect(() => {
+    api.listCustomers({ limit: "1000" }).then((res) => setCustomers(res.data.items));
+    api
+      .listProductUnits()
+      .then((res) => setProductUnits(res.data))
+      .catch((err: unknown) => toast.error(formatApiError(err, t)));
+  }, [t]);
+  useEffect(() => {
     setPriceEdits({});
     setEditingPrices(false);
-  }, [page, search]);
+  }, [page, search, customerId]);
   // Reset to page 1 whenever the route segment changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: id triggers the effect intentionally
   useEffect(() => {
@@ -97,8 +122,13 @@ export default function Products() {
   const { isVisible: isColVisible } = useColumnVisibility("inkvoice-cols-products");
   const showPriceColumn = editingPrices || isColVisible("unit_price");
   const visibleColCount =
-    productColumns.filter((c) => (c.key === "unit_price" ? showPriceColumn : isColVisible(c.key)))
-      .length + 1;
+    productColumns.filter((c) =>
+      c.key === "unit_price"
+        ? showPriceColumn
+        : c.key === "unit"
+          ? editingPrices || isColVisible(c.key)
+          : isColVisible(c.key),
+    ).length + 1;
 
   if (isForm) {
     return (
@@ -122,7 +152,13 @@ export default function Products() {
     );
   }
 
-  const sorted = sortData(products, sort);
+  const sorted = sortData(
+    products.map((product) => ({
+      ...product,
+      unit_price: product.customer_unit_price ?? product.unit_price,
+    })),
+    sort,
+  );
   const totalPages = Math.ceil(total / 20);
 
   const handleSort = (key: string, direction: "asc" | "desc" | null) => {
@@ -155,10 +191,7 @@ export default function Products() {
   };
 
   const handleBulkPriceUpdate = async () => {
-    const prices = Object.entries(priceEdits).map(([productId, unit_price]) => ({
-      id: productId,
-      unit_price,
-    }));
+    const prices = Object.entries(priceEdits).map(([id, edit]) => ({ id, ...edit }));
     if (prices.length === 0) return;
 
     setActionLoading(true);
@@ -166,7 +199,10 @@ export default function Products() {
       let succeeded = 0;
       let failed = 0;
       for (let offset = 0; offset < prices.length; offset += 500) {
-        const res = await api.batchProductPrices(prices.slice(offset, offset + 500));
+        const res = await api.batchProductPrices(
+          prices.slice(offset, offset + 500),
+          customerId || undefined,
+        );
         succeeded += res.data.succeeded;
         failed += res.data.failed;
       }
@@ -182,30 +218,36 @@ export default function Products() {
     }
   };
 
+  const loadProductsForPriceEdit = async () => {
+    const params: Record<string, string> = {
+      page: "1",
+      limit: "100",
+      ...(search ? { search } : {}),
+      ...(customerId ? { customer_id: customerId } : {}),
+    };
+    const firstPage = await api.listProducts(params);
+    const otherPages = await Promise.all(
+      Array.from({ length: firstPage.data.totalPages - 1 }, (_, index) =>
+        api.listProducts({ ...params, page: String(index + 2) }),
+      ),
+    );
+    return {
+      items: [...firstPage.data.items, ...otherPages.flatMap((response) => response.data.items)],
+      total: firstPage.data.total,
+    };
+  };
+
   const handleStartBulkPriceEdit = async () => {
     setActionLoading(true);
     try {
-      const params = { page: "1", limit: "100", ...(search ? { search } : {}) };
-      const firstPage = await api.listProducts(params);
-      const otherPages = await Promise.all(
-        Array.from({ length: firstPage.data.totalPages - 1 }, (_, index) =>
-          api.listProducts({ ...params, page: String(index + 2) }),
-        ),
-      );
-      const allProducts = [
-        ...firstPage.data.items,
-        ...otherPages.flatMap((response) => response.data.items),
-      ];
-      setProducts(allProducts);
-      setTotal(firstPage.data.total);
-      setPriceEdits(
-        Object.fromEntries(
-          allProducts.map((product: { id: string; unit_price: number }) => [
-            product.id,
-            product.unit_price,
-          ]),
-        ),
-      );
+      if (productUnits.length === 0) {
+        const units = await api.listProductUnits();
+        setProductUnits(units.data);
+      }
+      const firstPage = await loadProductsForPriceEdit();
+      setProducts(firstPage.items);
+      setTotal(firstPage.total);
+      setPriceEdits({});
       setEditingPrices(true);
     } catch (err: unknown) {
       toast.error(formatApiError(err, t));
@@ -256,6 +298,25 @@ export default function Products() {
             className="pl-9"
           />
         </div>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{t("products.price_customer")}</span>
+          <select
+            aria-label={t("products.price_customer")}
+            className="form-select min-w-48"
+            value={customerId}
+            onChange={(event) => {
+              setCustomerId(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">{t("common.all")}</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="glass-table-wrapper">
@@ -291,7 +352,10 @@ export default function Products() {
                   size="sm"
                   onClick={handleBulkPriceUpdate}
                   disabled={actionLoading || Object.keys(priceEdits).length === 0}
+                  aria-label={t("common.save")}
+                  title={t("common.save")}
                 >
+                  <Save className="h-4 w-4" />
                   {actionLoading ? t("common.saving") : t("common.save")}
                 </Button>
               </>
@@ -319,7 +383,7 @@ export default function Products() {
                   align="right"
                 />
               )}
-              {isColVisible("unit") && (
+              {(editingPrices || isColVisible("unit")) && (
                 <SortableColumnHeader
                   label={t("products.unit")}
                   sortKey="unit"
@@ -388,22 +452,62 @@ export default function Products() {
                       <div className="flex justify-end">
                         <NumberInput
                           aria-label={`${t("products.unit_price")} - ${p.name}`}
-                          value={priceEdits[p.id] ?? p.unit_price}
+                          value={
+                            priceEdits[p.id]?.unit_price ?? p.customer_unit_price ?? p.unit_price
+                          }
                           min={0}
                           decimals={2}
                           className="w-32 text-right"
-                          onValueChange={(value) =>
-                            setPriceEdits((current) => ({ ...current, [p.id]: value }))
-                          }
+                          onValueChange={(value) => {
+                            setPriceEdits((current) => ({
+                              ...current,
+                              [p.id]: {
+                                unit_price: value,
+                                unit: current[p.id]?.unit ?? p.unit,
+                              },
+                            }));
+                          }}
                         />
                       </div>
                     ) : (
-                      <div className="text-right">{formatCurrency(p.unit_price)}</div>
+                      <div className="text-right">
+                        {formatCurrency(p.customer_unit_price ?? p.unit_price)}
+                      </div>
                     )}
                   </TableCell>
                 )}
-                {isColVisible("unit") && (
-                  <TableCell className="text-muted-foreground capitalize">{p.unit}</TableCell>
+                {(editingPrices || isColVisible("unit")) && (
+                  <TableCell className="text-muted-foreground capitalize">
+                    {editingPrices ? (
+                      <select
+                        aria-label={`${t("products.unit")} - ${p.name}`}
+                        className="form-select min-w-24"
+                        value={priceEdits[p.id]?.unit ?? p.unit}
+                        onChange={(event) => {
+                          const unit = event.target.value;
+                          setPriceEdits((current) => ({
+                            ...current,
+                            [p.id]: {
+                              unit_price:
+                                current[p.id]?.unit_price ?? p.customer_unit_price ?? p.unit_price,
+                              unit,
+                            },
+                          }));
+                        }}
+                      >
+                        {!productUnits.some((unit) => unit.name === p.unit) && (
+                          <option value={p.unit}>{p.unit}</option>
+                        )}
+                        {productUnits.map((unit) => (
+                          <option key={unit.id} value={unit.name}>
+                            {unit.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      p.unit
+                    )}
+                  </TableCell>
                 )}
                 {isColVisible("status") && (
                   <TableCell>

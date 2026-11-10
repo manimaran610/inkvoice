@@ -480,6 +480,7 @@ const es: TranslationKeys = {
       "Se completa automáticamente a partir del nombre en inglés o Tanglish. Puede editarlo.",
     sku: "SKU",
     unit_price: "Precio unitario",
+    price_customer: "Cliente para precios",
     unit: "Unidad",
     category: "Categoría",
     status: "Estado",

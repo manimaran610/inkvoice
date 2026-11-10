@@ -55,6 +55,8 @@ interface LineItem {
   sort_order: number;
 }
 
+type ProductUnit = { id: string; name: string; symbol: string | null };
+
 let nextKey = 1;
 function genKey() {
   return `item-${nextKey++}`;
@@ -66,6 +68,7 @@ function SortableLineItem({
   index,
   isFirst,
   products,
+  units,
   errors,
   itemCount,
   onProductSelect,
@@ -80,6 +83,7 @@ function SortableLineItem({
   index: number;
   isFirst: boolean;
   products: any[];
+  units: ProductUnit[];
   errors: Record<string, string>;
   itemCount: number;
   onProductSelect: (index: number, productId: string) => void;
@@ -166,10 +170,16 @@ function SortableLineItem({
             value={item.unit}
             onChange={(e) => onUpdateItem(index, "unit", e.target.value)}
             className="form-select"
+            disabled={!!item.product_id}
           >
-            <option value="nos">nos</option>
-            <option value="kg">kg</option>
-            <option value="box">box</option>
+            {!units.some((unit) => unit.name === item.unit) && (
+              <option value={item.unit}>{item.unit}</option>
+            )}
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.name}>
+                {unit.symbol ? `${unit.name} (${unit.symbol})` : unit.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -247,10 +257,13 @@ export default function InvoiceForm({ onSave }: Props) {
       : null;
   });
   const [products, setProducts] = useState<any[]>([]);
+  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [taxDefs, setTaxDefs] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const customerPricingRequestRef = useRef(0);
+  const itemPricingRequestsRef = useRef(new Map<string, number>());
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -362,6 +375,10 @@ export default function InvoiceForm({ onSave }: Props) {
   useEffect(() => {
     fetchCustomers();
     api.listProducts({ limit: "1000", active: "true" }).then((r) => setProducts(r.data.items));
+    api
+      .listProductUnits()
+      .then((r) => setProductUnits(r.data))
+      .catch((err: unknown) => toast.error(formatApiError(err, t)));
     api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
 
     if (!isEdit) {
@@ -493,7 +510,7 @@ export default function InvoiceForm({ onSave }: Props) {
     const itemKey = items[index]?._key;
     if (!itemKey) return;
     try {
-      const { data: product } = await api.getProduct(productId);
+      const { data: product } = await api.getProduct(productId, form.customer_id || undefined);
       setProducts((current) => [...current.filter((item: any) => item.id !== product.id), product]);
       const taxDef = taxDefs.find((tax: any) => tax.id === product.tax_id);
       setItems((current) =>
@@ -503,7 +520,7 @@ export default function InvoiceForm({ onSave }: Props) {
                 ...item,
                 product_id: productId,
                 description: product.name,
-                unit_price: product.unit_price,
+                unit_price: product.customer_unit_price ?? product.unit_price,
                 unit: product.unit,
                 tax_id: product.tax_id || "",
                 tax_rate: taxDef?.rate || 0,
@@ -517,6 +534,7 @@ export default function InvoiceForm({ onSave }: Props) {
   };
 
   const updateItem = (index: number, field: string, value: any) => {
+    const currentItem = items[index];
     const newItems = [...items];
     (newItems[index] as any)[field] = value;
     if (field === "tax_id") {
@@ -525,6 +543,31 @@ export default function InvoiceForm({ onSave }: Props) {
     }
     setItems(newItems);
     markTouched(`item_${index}_${field}`);
+    if (field === "unit" && currentItem?.product_id) {
+      const { _key, product_id: productId } = currentItem;
+      const requestId = (itemPricingRequestsRef.current.get(_key) ?? 0) + 1;
+      itemPricingRequestsRef.current.set(_key, requestId);
+      api
+        .getProduct(productId, form.customer_id || undefined, String(value))
+        .then(({ data: product }) => {
+          if (itemPricingRequestsRef.current.get(_key) !== requestId) return;
+          setProducts((current) => [
+            ...current.filter((item: any) => item.id !== product.id),
+            product,
+          ]);
+          setItems((current) =>
+            current.map((item) =>
+              item._key === _key && item.product_id === productId && item.unit === value
+                ? {
+                    ...item,
+                    unit_price: product.customer_unit_price ?? product.unit_price,
+                  }
+                : item,
+            ),
+          );
+        })
+        .catch((err: unknown) => toast.error(formatApiError(err, t)));
+    }
   };
 
   const addItem = useCallback(() => {
@@ -622,6 +665,51 @@ export default function InvoiceForm({ onSave }: Props) {
   const handleCustomerChange = (customerId: string) => {
     markTouched("customer_id");
     setForm((f) => ({ ...f, customer_id: customerId }));
+    const requestId = ++customerPricingRequestRef.current;
+    const selectedItems = items.filter((item) => item.product_id);
+    for (const item of selectedItems) {
+      itemPricingRequestsRef.current.set(
+        item._key,
+        (itemPricingRequestsRef.current.get(item._key) ?? 0) + 1,
+      );
+    }
+    if (selectedItems.length > 0) {
+      Promise.all(
+        selectedItems.map(async (item) => ({
+          item,
+          product: (await api.getProduct(item.product_id, customerId || undefined, item.unit)).data,
+        })),
+      )
+        .then((results) => {
+          if (requestId !== customerPricingRequestRef.current) return;
+          setProducts((current) =>
+            results.reduce(
+              (merged, result) => [
+                ...merged.filter((product: any) => product.id !== result.product.id),
+                result.product,
+              ],
+              current,
+            ),
+          );
+          setItems((current) =>
+            current.map((item) => {
+              const result = results.find(
+                ({ item: selected }) =>
+                  selected._key === item._key &&
+                  selected.product_id === item.product_id &&
+                  selected.unit === item.unit,
+              );
+              return result
+                ? {
+                    ...item,
+                    unit_price: result.product.customer_unit_price ?? result.product.unit_price,
+                  }
+                : item;
+            }),
+          );
+        })
+        .catch((err: unknown) => toast.error(formatApiError(err, t)));
+    }
     if (customerId) {
       api.getCustomer(customerId).then((r) => {
         setAvailableCredit(Math.max(0, Number(r.data.available_credit) || 0));
@@ -922,6 +1010,7 @@ export default function InvoiceForm({ onSave }: Props) {
                         index={i}
                         isFirst={i === 0}
                         products={products}
+                        units={productUnits}
                         errors={errors}
                         itemCount={items.length}
                         onProductSelect={handleProductSelect}

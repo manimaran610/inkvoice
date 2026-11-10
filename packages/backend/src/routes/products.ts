@@ -15,10 +15,20 @@ products.get("/", requirePermission("products", "read"), (c) => {
   const category = c.req.query("category");
   const active = c.req.query("active");
   const search = c.req.query("search");
+  const customerId = c.req.query("customer_id");
+  const unit = c.req.query("unit");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
   const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || "20", 10) || 20), 100);
 
-  const data = productService.listProducts({ category, active, search, page, limit });
+  const data = productService.listProducts({
+    category,
+    active,
+    search,
+    customerId,
+    unit,
+    page,
+    limit,
+  });
   return c.json({ success: true, data });
 });
 
@@ -294,6 +304,7 @@ products.put("/units/:id", requirePermission("products", "update"), async (c) =>
       ]);
       db.run("UPDATE products SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
       db.run("UPDATE invoice_items SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
+      db.run("UPDATE customer_product_prices SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
       db.exec("COMMIT");
     } catch (err) {
       db.exec("ROLLBACK");
@@ -315,16 +326,24 @@ products.delete("/units/:id", requirePermission("products", "delete"), (c) => {
   } | null;
   if (!row) return c.json({ success: false, error: "Unit not found" }, 404);
   if (row.is_builtin) return c.json({ success: false, error: "Cannot delete built-in unit" }, 409);
-  const usage = db.query("SELECT COUNT(*) as count FROM products WHERE unit = ?").get(row.name) as {
-    count: number;
-  };
+  const usage = db
+    .query(
+      `SELECT
+        (SELECT COUNT(*) FROM products WHERE unit = ?) +
+        (SELECT COUNT(*) FROM customer_product_prices WHERE unit = ?) AS count`,
+    )
+    .get(row.name, row.name) as { count: number };
   if (usage.count > 0) return c.json({ success: false, error: "Unit is in use by products" }, 409);
   db.run("DELETE FROM product_units WHERE id = ?", [id]);
   return c.json({ success: true });
 });
 
 products.get("/:id", requirePermission("products", "read"), (c) => {
-  const product = productService.getProduct(c.req.param("id"));
+  const product = productService.getProduct(
+    c.req.param("id"),
+    c.req.query("customer_id"),
+    c.req.query("unit"),
+  );
   if (!product) {
     return c.json({ success: false, error: "Product not found" }, 404);
   }
@@ -344,11 +363,13 @@ const productSchema = z.object({
 });
 
 const batchPriceSchema = z.object({
+  customer_id: z.string().min(1).optional(),
   prices: z
     .array(
       z.object({
         id: z.string().min(1),
         unit_price: z.number().min(0),
+        unit: z.string().min(1).max(20).optional(),
       }),
     )
     .min(1)
@@ -392,16 +413,38 @@ products.post("/batch/prices", requirePermission("products", "update"), async (c
   const body = await c.req.json();
   const parsed = batchPriceSchema.parse(body);
   const db = getDb();
-  const updatePrice = db.query(
-    "UPDATE products SET unit_price = ?, updated_at = datetime('now') WHERE id = ?",
+  if (parsed.customer_id) {
+    const customer = db.query("SELECT id FROM customers WHERE id = ?").get(parsed.customer_id);
+    if (!customer) return c.json({ success: false, error: "Customer not found" }, 404);
+  }
+  const updateDefaultPrice = db.query(
+    "UPDATE products SET unit_price = ?, unit = ?, updated_at = datetime('now') WHERE id = ?",
   );
+  const updateProductUnit = db.query(
+    "UPDATE products SET unit = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+  const updateCustomerPrice = db.query(
+    `INSERT INTO customer_product_prices (customer_id, product_id, unit, unit_price, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(customer_id, product_id, unit) DO UPDATE SET
+       unit_price = excluded.unit_price, updated_at = datetime('now')`,
+  );
+  const productExists = db.query("SELECT id, unit FROM products WHERE id = ?");
   const errors: { id: string; reason: string }[] = [];
   let succeeded = 0;
 
   db.exec("BEGIN");
   try {
-    for (const { id, unit_price } of parsed.prices) {
-      const result = updatePrice.run(unit_price, id);
+    for (const { id, unit_price, unit } of parsed.prices) {
+      const product = productExists.get(id) as { id: string; unit: string } | null;
+      const result = product
+        ? parsed.customer_id
+          ? updateProductUnit.run(unit ?? product.unit, id)
+          : updateDefaultPrice.run(unit_price, unit ?? product.unit, id)
+        : { changes: 0 };
+      if (product && parsed.customer_id) {
+        updateCustomerPrice.run(parsed.customer_id, id, unit ?? product.unit, unit_price);
+      }
       if (result.changes > 0) {
         succeeded++;
       } else {

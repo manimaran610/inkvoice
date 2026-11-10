@@ -482,6 +482,7 @@ const fr: TranslationKeys = {
       "Rempli automatiquement à partir du nom anglais ou Tanglish. Vous pouvez le modifier.",
     sku: "SKU",
     unit_price: "Prix unitaire",
+    price_customer: "Client pour les tarifs",
     unit: "Unité",
     category: "Catégorie",
     status: "Statut",

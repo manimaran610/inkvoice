@@ -472,6 +472,7 @@ const tr: TranslationKeys = {
     tamil_name_hint: "İngilizce veya Tanglish addan otomatik doldurulur. Düzenleyebilirsiniz.",
     sku: "SKU",
     unit_price: "Birim Fiyat",
+    price_customer: "Fiyatlandırma müşterisi",
     unit: "Birim",
     category: "Kategori",
     status: "Durum",

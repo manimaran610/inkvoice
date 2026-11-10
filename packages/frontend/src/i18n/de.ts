@@ -491,6 +491,7 @@ const de: TranslationKeys = {
       "Wird automatisch aus dem englischen oder Tanglish-Namen ausgefüllt und kann bearbeitet werden.",
     sku: "SKU",
     unit_price: "Einzelpreis",
+    price_customer: "Kunde für Preise",
     unit: "Einheit",
     category: "Kategorie",
     status: "Status",
