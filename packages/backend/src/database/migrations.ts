@@ -1165,6 +1165,13 @@ const MIGRATIONS: Migration[] = [
       addCustomerProductPriceUnits(db);
     },
   },
+  {
+    version: 37,
+    name: "customer_product_default_units",
+    up: (db) => {
+      addCustomerProductDefaultUnits(db);
+    },
+  },
 ];
 
 export const LATEST_MIGRATION_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -1195,6 +1202,7 @@ function backfillExistingDb(db: Database): void {
   }
   createCustomerProductPrices(db);
   addCustomerProductPriceUnits(db);
+  addCustomerProductDefaultUnits(db);
   for (const m of MIGRATIONS) {
     db.run(`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`, [
       m.version,
@@ -1259,6 +1267,21 @@ function addCustomerProductPriceUnits(db: Database): void {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_customer_product_prices_product
       ON customer_product_prices(product_id);
+  `);
+}
+
+function addCustomerProductDefaultUnits(db: Database): void {
+  if (!tableExists(db, "products") || !tableExists(db, "customer_product_prices")) return;
+  addColumnIfMissing(db, "customer_product_prices", "is_default", "INTEGER NOT NULL DEFAULT 0");
+  db.exec(`
+    UPDATE customer_product_prices
+    SET is_default = 1
+    WHERE EXISTS (
+      SELECT 1
+      FROM products p
+      WHERE p.id = customer_product_prices.product_id
+        AND p.unit = customer_product_prices.unit
+    );
   `);
 }
 

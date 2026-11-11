@@ -424,31 +424,44 @@ products.post("/batch/prices", requirePermission("products", "update"), async (c
     "UPDATE products SET unit = ?, updated_at = datetime('now') WHERE id = ?",
   );
   const updateCustomerPrice = db.query(
-    `INSERT INTO customer_product_prices (customer_id, product_id, unit, unit_price, updated_at)
-     VALUES (?, ?, ?, ?, datetime('now'))
+    `INSERT INTO customer_product_prices (customer_id, product_id, unit, unit_price, is_default, updated_at)
+     VALUES (?, ?, ?, ?, 1, datetime('now'))
      ON CONFLICT(customer_id, product_id, unit) DO UPDATE SET
-       unit_price = excluded.unit_price, updated_at = datetime('now')`,
+       unit_price = excluded.unit_price, is_default = 1, updated_at = datetime('now')`,
   );
-  const productExists = db.query("SELECT id, unit FROM products WHERE id = ?");
+  const clearCustomerDefaultUnit = db.query(
+    "UPDATE customer_product_prices SET is_default = 0 WHERE customer_id = ? AND product_id = ? AND is_default = 1",
+  );
+  const productExists = db.query(
+    `SELECT p.id, p.unit,
+       (SELECT cp.unit FROM customer_product_prices cp
+        WHERE cp.customer_id = ? AND cp.product_id = p.id AND cp.is_default = 1) AS customer_unit
+     FROM products p WHERE p.id = ?`,
+  );
   const errors: { id: string; reason: string }[] = [];
   let succeeded = 0;
 
   db.exec("BEGIN");
   try {
     for (const { id, unit_price, unit } of parsed.prices) {
-      const product = productExists.get(id) as { id: string; unit: string } | null;
-      const result = product
-        ? parsed.customer_id
-          ? updateProductUnit.run(unit ?? product.unit, id)
-          : updateDefaultPrice.run(unit_price, unit ?? product.unit, id)
-        : { changes: 0 };
-      if (product && parsed.customer_id) {
-        updateCustomerPrice.run(parsed.customer_id, id, unit ?? product.unit, unit_price);
+      const product = productExists.get(parsed.customer_id ?? null, id) as {
+        id: string;
+        unit: string;
+        customer_unit: string | null;
+      } | null;
+      if (!product) {
+        errors.push({ id, reason: "Product not found" });
+        continue;
       }
-      if (result.changes > 0) {
+
+      if (parsed.customer_id) {
+        const selectedUnit = unit ?? product.customer_unit ?? product.unit;
+        clearCustomerDefaultUnit.run(parsed.customer_id, id);
+        updateCustomerPrice.run(parsed.customer_id, id, selectedUnit, unit_price);
         succeeded++;
       } else {
-        errors.push({ id, reason: "Product not found" });
+        updateDefaultPrice.run(unit_price, unit ?? product.unit, id);
+        succeeded++;
       }
     }
     db.exec("COMMIT");

@@ -32,13 +32,12 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useNewEntityShortcut } from "@/hooks/use-new-entity-shortcut";
 import { useTranslation } from "@/i18n";
+import { PRODUCT_UNITS } from "@/lib/constants";
 import { formatApiError } from "@/lib/format-api-error";
 import { consumeRowHighlight } from "@/lib/highlight-row";
 import { isRecordId } from "@/lib/record-id";
 import { cn, formatCurrency } from "@/lib/utils";
 import ProductForm from "@/pages/ProductForm";
-
-type ProductUnit = { id: string; name: string; symbol: string | null };
 
 export default function Products() {
   const { t } = useTranslation();
@@ -57,7 +56,6 @@ export default function Products() {
   const [priceEdits, setPriceEdits] = useState<
     Record<string, { unit_price: number; unit: string }>
   >({});
-  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const navigate = useNavigate();
@@ -67,7 +65,11 @@ export default function Products() {
   const isForm = isNew || (!!id && isRecordId(id));
 
   const fetchProducts = useCallback(async () => {
-    const params: Record<string, string> = { page: String(page), limit: "20" };
+    const params: Record<string, string> = {
+      page: String(page),
+      limit: "20",
+      active: "true",
+    };
     if (search) params.search = search;
     if (customerId) params.customer_id = customerId;
     const res = await api.listProducts(params);
@@ -80,10 +82,6 @@ export default function Products() {
   }, [fetchProducts]);
   useEffect(() => {
     api.listCustomers({ limit: "1000" }).then((res) => setCustomers(res.data.items));
-    api
-      .listProductUnits()
-      .then((res) => setProductUnits(res.data))
-      .catch((err: unknown) => toast.error(formatApiError(err, t)));
   }, [t]);
   useEffect(() => {
     setPriceEdits({});
@@ -156,6 +154,7 @@ export default function Products() {
     products.map((product) => ({
       ...product,
       unit_price: product.customer_unit_price ?? product.unit_price,
+      unit: product.customer_unit ?? product.unit,
     })),
     sort,
   );
@@ -222,6 +221,7 @@ export default function Products() {
     const params: Record<string, string> = {
       page: "1",
       limit: "100",
+      active: "true",
       ...(search ? { search } : {}),
       ...(customerId ? { customer_id: customerId } : {}),
     };
@@ -240,10 +240,6 @@ export default function Products() {
   const handleStartBulkPriceEdit = async () => {
     setActionLoading(true);
     try {
-      if (productUnits.length === 0) {
-        const units = await api.listProductUnits();
-        setProductUnits(units.data);
-      }
       const firstPage = await loadProductsForPriceEdit();
       setProducts(firstPage.items);
       setTotal(firstPage.total);
@@ -463,7 +459,7 @@ export default function Products() {
                               ...current,
                               [p.id]: {
                                 unit_price: value,
-                                unit: current[p.id]?.unit ?? p.unit,
+                                unit: current[p.id]?.unit ?? p.customer_unit ?? p.unit,
                               },
                             }));
                           }}
@@ -477,12 +473,15 @@ export default function Products() {
                   </TableCell>
                 )}
                 {(editingPrices || isColVisible("unit")) && (
-                  <TableCell className="text-muted-foreground capitalize">
+                  <TableCell
+                    className="text-muted-foreground capitalize"
+                    onClick={editingPrices ? (e) => e.stopPropagation() : undefined}
+                  >
                     {editingPrices ? (
                       <select
                         aria-label={`${t("products.unit")} - ${p.name}`}
                         className="form-select min-w-24"
-                        value={priceEdits[p.id]?.unit ?? p.unit}
+                        value={priceEdits[p.id]?.unit ?? p.customer_unit ?? p.unit}
                         onChange={(event) => {
                           const unit = event.target.value;
                           setPriceEdits((current) => ({
@@ -495,12 +494,14 @@ export default function Products() {
                           }));
                         }}
                       >
-                        {!productUnits.some((unit) => unit.name === p.unit) && (
-                          <option value={p.unit}>{p.unit}</option>
+                        {!PRODUCT_UNITS.includes(p.unit) && (
+                          <option value={p.unit} disabled>
+                            {p.unit}
+                          </option>
                         )}
-                        {productUnits.map((unit) => (
-                          <option key={unit.id} value={unit.name}>
-                            {unit.name}
+                        {PRODUCT_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
                           </option>
                         ))}
                       </select>

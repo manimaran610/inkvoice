@@ -41,14 +41,17 @@ export function listProducts(params: ProductListParams): PaginatedResponse<Produ
   const items = customerId
     ? (db
         .query(
-          `SELECT p.*, cp.unit_price as customer_unit_price
+          `SELECT p.*, default_cp.unit as customer_unit, cp.unit_price as customer_unit_price
            FROM products p
+           LEFT JOIN customer_product_prices default_cp
+             ON default_cp.product_id = p.id AND default_cp.customer_id = ?
+             AND default_cp.is_default = 1
            LEFT JOIN customer_product_prices cp
              ON cp.product_id = p.id AND cp.customer_id = ?
-             AND cp.unit = COALESCE(?, p.unit)
+             AND cp.unit = COALESCE(?, default_cp.unit, p.unit)
            ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
         )
-        .all(customerId, unit ?? null, ...queryParams, limit, offset) as Product[])
+        .all(customerId, customerId, unit ?? null, ...queryParams, limit, offset) as Product[])
     : (db
         .query(
           `SELECT *, NULL as customer_unit_price FROM products ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
@@ -107,14 +110,17 @@ export function getProduct(id: string, customerId?: string, unit?: string): Prod
   if (customerId) {
     return db
       .query(
-        `SELECT p.*, cp.unit_price as customer_unit_price
+        `SELECT p.*, default_cp.unit as customer_unit, cp.unit_price as customer_unit_price
          FROM products p
+         LEFT JOIN customer_product_prices default_cp
+           ON default_cp.product_id = p.id AND default_cp.customer_id = ?
+           AND default_cp.is_default = 1
          LEFT JOIN customer_product_prices cp
            ON cp.product_id = p.id AND cp.customer_id = ?
-           AND cp.unit = COALESCE(?, p.unit)
+           AND cp.unit = COALESCE(?, default_cp.unit, p.unit)
          WHERE p.id = ?`,
       )
-      .get(customerId, unit ?? null, id) as Product | null;
+      .get(customerId, customerId, unit ?? null, id) as Product | null;
   }
   return db
     .query("SELECT *, NULL as customer_unit_price FROM products WHERE id = ?")

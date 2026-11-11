@@ -12,12 +12,11 @@ import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
 import { isPositive, maxLength, required, useFormValidation } from "@/hooks/use-form-validation";
 import { useTranslation } from "@/i18n";
+import { PRODUCT_UNITS } from "@/lib/constants";
 import { formatApiError } from "@/lib/format-api-error";
 import { markRowHighlight } from "@/lib/highlight-row";
 import { pushRecentlyViewed } from "@/lib/recently-viewed";
 import { tamilProductName } from "@/lib/tamil-transliteration";
-
-const PRODUCT_UNITS = ["nos", "kg", "box"] as const;
 
 interface Props {
   onSave: () => void;

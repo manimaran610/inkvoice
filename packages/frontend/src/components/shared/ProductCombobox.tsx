@@ -17,6 +17,7 @@ interface ProductOption {
   id: string;
   name: string;
   sku?: string | null;
+  is_active?: number | boolean | string;
 }
 
 interface ProductComboboxProps {
@@ -27,6 +28,7 @@ interface ProductComboboxProps {
    *  the current search text so the product-create page can pre-fill the name. */
   onAddNew: (search: string) => void;
   productTriggerId?: string;
+  disabledProductIds?: string[];
 }
 
 export function ProductCombobox({
@@ -35,12 +37,20 @@ export function ProductCombobox({
   onChange,
   onAddNew,
   productTriggerId,
+  disabledProductIds = [],
 }: ProductComboboxProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selected = products.find((p) => p.id === value);
+  const activeProducts = products.filter(
+    (p) =>
+      p.is_active === undefined || p.is_active === 1 || p.is_active === true || p.is_active === "1",
+  );
+  const selectableProducts = activeProducts.filter(
+    (product) => product.id === value || !disabledProductIds.includes(product.id),
+  );
 
   useEffect(() => {
     if (open) {
@@ -111,7 +121,7 @@ export function ProductCombobox({
               </button>
             </CommandEmpty>
             <CommandGroup>
-              {products.map((p) => (
+              {selectableProducts.map((p) => (
                 <CommandItem
                   key={p.id}
                   value={p.id}

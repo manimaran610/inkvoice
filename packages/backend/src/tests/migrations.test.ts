@@ -135,6 +135,11 @@ describe("schema migration runner", () => {
         .get(name) as { name: string } | null;
       expect(row?.name).toBe(name);
     }
+
+    const customerPriceColumns = db
+      .query("SELECT name FROM pragma_table_info('customer_product_prices')")
+      .all() as { name: string }[];
+    expect(customerPriceColumns.map((column) => column.name)).toContain("is_default");
   });
 
   test("pre-versioning DB is backfilled instead of re-running migrations", () => {
@@ -301,11 +306,11 @@ describe("schema migration runner", () => {
     ).toThrow();
   });
 
-  test("migrations reach version 36", () => {
-    expect(LATEST_MIGRATION_VERSION).toBe(36);
+  test("migrations reach version 37", () => {
+    expect(LATEST_MIGRATION_VERSION).toBe(37);
   });
 
-  test("migration 36 moves existing customer prices to the product's current unit", () => {
+  test("customer price unit migration preserves the default customer unit", () => {
     runWith(db, () => runMigrations());
     db.run("INSERT INTO customers (id, name) VALUES (?, ?)", ["price-customer", "Price Customer"]);
     db.run("INSERT INTO products (id, name, unit) VALUES (?, ?, ?)", [
@@ -331,16 +336,20 @@ describe("schema migration runner", () => {
       DROP TABLE customer_product_prices;
       ALTER TABLE customer_product_prices_legacy RENAME TO customer_product_prices;
     `);
-    db.run("DELETE FROM schema_migrations WHERE version = 36");
+    db.run("DELETE FROM schema_migrations WHERE version IN (36, 37)");
 
     runWith(db, () => runMigrations());
 
     const migrated = db
       .query(
-        "SELECT unit, unit_price FROM customer_product_prices WHERE customer_id = ? AND product_id = ?",
+        "SELECT unit, unit_price, is_default FROM customer_product_prices WHERE customer_id = ? AND product_id = ?",
       )
-      .get("price-customer", "price-product") as { unit: string; unit_price: number };
-    expect(migrated).toEqual({ unit: "kg", unit_price: 12 });
+      .get("price-customer", "price-product") as {
+      unit: string;
+      unit_price: number;
+      is_default: number;
+    };
+    expect(migrated).toEqual({ unit: "kg", unit_price: 12, is_default: 1 });
   });
 
   test("customer_payment_methods has the expected shape", () => {

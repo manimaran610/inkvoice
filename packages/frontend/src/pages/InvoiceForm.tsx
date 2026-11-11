@@ -34,6 +34,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n";
+import { PRODUCT_UNITS } from "@/lib/constants";
 import { addDaysIso, todayIso } from "@/lib/date";
 import { formatApiError } from "@/lib/format-api-error";
 import { markRowHighlight } from "@/lib/highlight-row";
@@ -55,8 +56,6 @@ interface LineItem {
   sort_order: number;
 }
 
-type ProductUnit = { id: string; name: string; symbol: string | null };
-
 let nextKey = 1;
 function genKey() {
   return `item-${nextKey++}`;
@@ -68,7 +67,7 @@ function SortableLineItem({
   index,
   isFirst,
   products,
-  units,
+  disabledProductIds,
   errors,
   itemCount,
   onProductSelect,
@@ -83,7 +82,7 @@ function SortableLineItem({
   index: number;
   isFirst: boolean;
   products: any[];
-  units: ProductUnit[];
+  disabledProductIds: string[];
   errors: Record<string, string>;
   itemCount: number;
   onProductSelect: (index: number, productId: string) => void;
@@ -121,6 +120,14 @@ function SortableLineItem({
             return;
           }
           if (
+            event.key === "Enter" &&
+            (event.target as HTMLElement).matches("[data-line-item-quantity]")
+          ) {
+            event.preventDefault();
+            onAdvanceRow(index);
+            return;
+          }
+          if (
             event.key === "Tab" &&
             !event.shiftKey &&
             (event.target as HTMLElement).matches("[data-line-item-last]")
@@ -150,6 +157,7 @@ function SortableLineItem({
           <ProductCombobox
             products={products}
             value={item.product_id}
+            disabledProductIds={disabledProductIds}
             onChange={(productId) => onProductSelect(index, productId)}
             onAddNew={(search) => onAddNewProduct(index, search)}
             productTriggerId={item._key}
@@ -160,6 +168,7 @@ function SortableLineItem({
           <NumberInput
             value={item.quantity}
             min={0}
+            data-line-item-quantity
             onValueChange={(v) => onUpdateItem(index, "quantity", v)}
             aria-invalid={!!errors[`item_${index}_quantity`]}
           />
@@ -172,12 +181,14 @@ function SortableLineItem({
             className="form-select"
             disabled={!!item.product_id}
           >
-            {!units.some((unit) => unit.name === item.unit) && (
-              <option value={item.unit}>{item.unit}</option>
+            {!PRODUCT_UNITS.some((unit) => unit === item.unit) && (
+              <option value={item.unit} disabled>
+                {item.unit}
+              </option>
             )}
-            {units.map((unit) => (
-              <option key={unit.id} value={unit.name}>
-                {unit.symbol ? `${unit.name} (${unit.symbol})` : unit.name}
+            {PRODUCT_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
               </option>
             ))}
           </select>
@@ -211,11 +222,13 @@ function SortableLineItem({
           </Button>
         </div>
       </div>
-      {(errors[`item_${index}_description`] ||
+      {(errors[`item_${index}_product`] ||
+        errors[`item_${index}_description`] ||
         errors[`item_${index}_quantity`] ||
         errors[`item_${index}_unit_price`]) && (
         <p className="text-xs text-destructive pl-0.5 animate-slide-down">
-          {errors[`item_${index}_description`] ||
+          {errors[`item_${index}_product`] ||
+            errors[`item_${index}_description`] ||
             errors[`item_${index}_quantity`] ||
             errors[`item_${index}_unit_price`]}
         </p>
@@ -257,7 +270,6 @@ export default function InvoiceForm({ onSave }: Props) {
       : null;
   });
   const [products, setProducts] = useState<any[]>([]);
-  const [productUnits, setProductUnits] = useState<ProductUnit[]>([]);
   const [taxDefs, setTaxDefs] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -331,7 +343,12 @@ export default function InvoiceForm({ onSave }: Props) {
       if (!f.issue_date) newErrors.issue_date = t("validation.issue_date_required");
       if (f.due_date && f.due_date < f.issue_date)
         newErrors.due_date = t("validation.due_date_after_issue");
+      const selectedProducts = new Set<string>();
       itms.forEach((item, i) => {
+        if (item.product_id && selectedProducts.has(item.product_id)) {
+          newErrors[`item_${i}_product`] = t("validation.duplicate_product");
+        }
+        if (item.product_id) selectedProducts.add(item.product_id);
         if (!item.description.trim())
           newErrors[`item_${i}_description`] = t("validation.description_required");
         if (item.quantity <= 0) newErrors[`item_${i}_quantity`] = t("validation.must_be_positive");
@@ -375,10 +392,6 @@ export default function InvoiceForm({ onSave }: Props) {
   useEffect(() => {
     fetchCustomers();
     api.listProducts({ limit: "1000", active: "true" }).then((r) => setProducts(r.data.items));
-    api
-      .listProductUnits()
-      .then((r) => setProductUnits(r.data))
-      .catch((err: unknown) => toast.error(formatApiError(err, t)));
     api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
 
     if (!isEdit) {
@@ -509,19 +522,28 @@ export default function InvoiceForm({ onSave }: Props) {
   const handleProductSelect = async (index: number, productId: string) => {
     const itemKey = items[index]?._key;
     if (!itemKey) return;
+    if (items.some((item) => item._key !== itemKey && item.product_id === productId)) {
+      toast.error(t("validation.duplicate_product"));
+      return;
+    }
     try {
       const { data: product } = await api.getProduct(productId, form.customer_id || undefined);
+      if (product.is_active !== 1 && product.is_active !== true && product.is_active !== "1") {
+        toast.error(t("validation.inactive_product"));
+        return;
+      }
       setProducts((current) => [...current.filter((item: any) => item.id !== product.id), product]);
       const taxDef = taxDefs.find((tax: any) => tax.id === product.tax_id);
       setItems((current) =>
         current.map((item) =>
-          item._key === itemKey
+          item._key === itemKey &&
+          !current.some((other) => other._key !== itemKey && other.product_id === productId)
             ? {
                 ...item,
                 product_id: productId,
                 description: product.name,
                 unit_price: product.customer_unit_price ?? product.unit_price,
-                unit: product.unit,
+                unit: product.customer_unit ?? product.unit,
                 tax_id: product.tax_id || "",
                 tax_rate: taxDef?.rate || 0,
               }
@@ -809,6 +831,7 @@ export default function InvoiceForm({ onSave }: Props) {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
+    let createdInvoiceId: string | null = null;
     try {
       const data = buildPayload();
       let result;
@@ -818,12 +841,19 @@ export default function InvoiceForm({ onSave }: Props) {
         setSaveStatus("saved");
       } else {
         result = await api.createInvoice(data);
-        if (result?.data?.id) markRowHighlight("invoice", result.data.id);
+        const createdId = result.data.id;
+        if (typeof createdId !== "string" || !createdId) {
+          throw new Error("Created invoice response did not include an ID");
+        }
+        createdInvoiceId = createdId;
+        markRowHighlight("invoice", createdId);
+        result = await api.markSent(createdId);
       }
-      toast.success(isEdit ? t("invoices.invoice_updated") : t("invoices.invoice_created"));
+      toast.success(isEdit ? t("invoices.invoice_updated") : t("invoices.invoice_created_sent"));
       onSave(result.data.id);
     } catch (err: unknown) {
       toast.error(formatApiError(err, t));
+      if (createdInvoiceId) onSave(createdInvoiceId);
     } finally {
       setLoading(false);
     }
@@ -855,14 +885,14 @@ export default function InvoiceForm({ onSave }: Props) {
             type="submit"
             size="sm"
             disabled={loading}
-            title={`${loading ? t("common.saving") : isEdit ? t("invoices.update_invoice") : t("invoices.save_as_draft")} (Ctrl+S)`}
+            title={`${loading ? t("common.saving") : isEdit ? t("invoices.update_invoice") : t("common.save")} (Ctrl+S)`}
           >
             <Save className="h-4 w-4" />
             {loading
               ? t("common.saving")
               : isEdit
                 ? t("invoices.update_invoice")
-                : t("invoices.save_as_draft")}
+                : t("common.save")}
           </Button>
         </div>
       </div>
@@ -1010,7 +1040,9 @@ export default function InvoiceForm({ onSave }: Props) {
                         index={i}
                         isFirst={i === 0}
                         products={products}
-                        units={productUnits}
+                        disabledProductIds={items
+                          .filter((_, itemIndex) => itemIndex !== i)
+                          .map((lineItem) => lineItem.product_id)}
                         errors={errors}
                         itemCount={items.length}
                         onProductSelect={handleProductSelect}

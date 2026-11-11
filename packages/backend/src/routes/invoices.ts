@@ -239,29 +239,44 @@ const itemSchema = z.object({
   sort_order: z.number().optional(),
 });
 
-const invoiceSchema = z.object({
-  customer_id: z.string().min(1),
-  issue_date: z.string().min(1),
-  due_date: z.string().optional().nullable(),
-  invoice_number: z.string().optional(),
-  notes: z.string().max(2000).optional().nullable(),
-  payment_terms: z.string().max(500).optional().nullable(),
-  currency: z.string().max(3).optional(),
-  exchange_rate: z.number().positive().optional(),
-  discount_type: z.enum(["percentage", "amount"]).optional().nullable(),
-  discount_value: z.number().min(0).optional(),
-  // Early-payment discount. On update, an omitted field keeps the stored
-  // value and null clears it.
-  cash_discount_type: z.enum(["percentage", "amount"]).optional().nullable(),
-  cash_discount_value: z.number().min(0).optional().nullable(),
-  cash_discount_days: z.number().int().min(0).max(3650).optional().nullable(),
-  prices_include_tax: z.boolean().optional(),
-  use_tamil_product_names: z.boolean().optional(),
-  locale: z.string().max(10).optional().nullable(),
-  template_id: z.string().optional().nullable(),
-  tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),
-  items: z.array(itemSchema).min(1),
-});
+const invoiceSchema = z
+  .object({
+    customer_id: z.string().min(1),
+    issue_date: z.string().min(1),
+    due_date: z.string().optional().nullable(),
+    invoice_number: z.string().optional(),
+    notes: z.string().max(2000).optional().nullable(),
+    payment_terms: z.string().max(500).optional().nullable(),
+    currency: z.string().max(3).optional(),
+    exchange_rate: z.number().positive().optional(),
+    discount_type: z.enum(["percentage", "amount"]).optional().nullable(),
+    discount_value: z.number().min(0).optional(),
+    // Early-payment discount. On update, an omitted field keeps the stored
+    // value and null clears it.
+    cash_discount_type: z.enum(["percentage", "amount"]).optional().nullable(),
+    cash_discount_value: z.number().min(0).optional().nullable(),
+    cash_discount_days: z.number().int().min(0).max(3650).optional().nullable(),
+    prices_include_tax: z.boolean().optional(),
+    use_tamil_product_names: z.boolean().optional(),
+    locale: z.string().max(10).optional().nullable(),
+    template_id: z.string().optional().nullable(),
+    tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),
+    items: z.array(itemSchema).min(1),
+  })
+  .superRefine((invoice, ctx) => {
+    const selectedProducts = new Set<string>();
+    invoice.items.forEach((item, index) => {
+      if (!item.product_id) return;
+      if (selectedProducts.has(item.product_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["items", index, "product_id"],
+          message: "A product can only be added once per invoice",
+        });
+      }
+      selectedProducts.add(item.product_id);
+    });
+  });
 
 const tagListSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(50)).max(30).default([]),

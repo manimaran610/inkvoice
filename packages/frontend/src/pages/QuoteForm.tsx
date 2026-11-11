@@ -56,6 +56,7 @@ function SortableQuoteItem({
   item,
   index,
   products,
+  disabledProductIds,
   taxes,
   itemCount,
   onUpdateItem,
@@ -66,6 +67,7 @@ function SortableQuoteItem({
   item: LineItem;
   index: number;
   products: any[];
+  disabledProductIds: string[];
   taxes: any[];
   itemCount: number;
   onUpdateItem: (index: number, field: string, value: any) => void;
@@ -116,7 +118,11 @@ function SortableQuoteItem({
         >
           <option value="">{t("quotes.custom_item")}</option>
           {products.map((p: any) => (
-            <option key={p.id} value={p.id}>
+            <option
+              key={p.id}
+              value={p.id}
+              disabled={p.id !== item.product_id && disabledProductIds.includes(p.id)}
+            >
               {p.name}
             </option>
           ))}
@@ -199,7 +205,7 @@ export default function QuoteForm() {
       description: "",
       quantity: 1,
       unit_price: 0,
-      unit: "piece",
+      unit: "kg",
       tax_id: "",
       tax_rate: 0,
       sort_order: 0,
@@ -328,7 +334,7 @@ export default function QuoteForm() {
         description: "",
         quantity: 1,
         unit_price: 0,
-        unit: "piece",
+        unit: "kg",
         tax_id: "",
         tax_rate: 0,
         sort_order: prev.length,
@@ -517,6 +523,9 @@ export default function QuoteForm() {
                       item={item}
                       index={i}
                       products={products}
+                      disabledProductIds={items
+                        .filter((_, itemIndex) => itemIndex !== i)
+                        .map((lineItem) => lineItem.product_id)}
                       taxes={taxes}
                       itemCount={items.length}
                       onUpdateItem={updateItem}

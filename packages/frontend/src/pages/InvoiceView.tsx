@@ -311,6 +311,9 @@ export default function InvoiceView({ onBack }: Props) {
           <Button variant="outline" size="sm" onClick={() => navigate(`/invoices/${id}/edit`)}>
             <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
           </Button>
+          <Button variant="outline" size="sm" onClick={handleDuplicate}>
+            <Copy className="h-4 w-4 mr-1" /> {t("invoices.clone_same_customer")}
+          </Button>
           <Button variant="outline" size="sm" onClick={handlePreview}>
             <Eye className="h-4 w-4 mr-1" /> {t("invoices.preview")}
           </Button>
@@ -372,9 +375,6 @@ export default function InvoiceView({ onBack }: Props) {
                   <Layers className="h-4 w-4 mr-2" /> {t("invoices.consolidate")}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={handleDuplicate}>
-                <Copy className="h-4 w-4 mr-2" /> {t("invoices.duplicate")}
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={async () => {
                   try {
