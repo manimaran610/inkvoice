@@ -2,8 +2,7 @@ name: Publish container image
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [release/skv]
   workflow_dispatch:
 
 permissions:
@@ -27,9 +26,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=ref,event=tag
+            type=raw,value=skv
       - uses: docker/build-push-action@v6
         with:
           context: .

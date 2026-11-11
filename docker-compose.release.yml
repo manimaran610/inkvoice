@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/manimaran610/inkvoice:latest
+    image: ghcr.io/manimaran610/inkvoice:skv
     pull_policy: missing
     ports:
       - "127.0.0.1:3000:3000"
