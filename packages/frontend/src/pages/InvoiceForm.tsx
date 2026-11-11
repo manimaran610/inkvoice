@@ -34,6 +34,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n";
+import { PRODUCT_UNITS } from "@/lib/constants";
 import { addDaysIso, todayIso } from "@/lib/date";
 import { formatApiError } from "@/lib/format-api-error";
 import { markRowHighlight } from "@/lib/highlight-row";
@@ -66,6 +67,7 @@ function SortableLineItem({
   index,
   isFirst,
   products,
+  disabledProductIds,
   errors,
   itemCount,
   onProductSelect,
@@ -80,6 +82,7 @@ function SortableLineItem({
   index: number;
   isFirst: boolean;
   products: any[];
+  disabledProductIds: string[];
   errors: Record<string, string>;
   itemCount: number;
   onProductSelect: (index: number, productId: string) => void;
@@ -117,6 +120,14 @@ function SortableLineItem({
             return;
           }
           if (
+            event.key === "Enter" &&
+            (event.target as HTMLElement).matches("[data-line-item-quantity]")
+          ) {
+            event.preventDefault();
+            onAdvanceRow(index);
+            return;
+          }
+          if (
             event.key === "Tab" &&
             !event.shiftKey &&
             (event.target as HTMLElement).matches("[data-line-item-last]")
@@ -146,6 +157,7 @@ function SortableLineItem({
           <ProductCombobox
             products={products}
             value={item.product_id}
+            disabledProductIds={disabledProductIds}
             onChange={(productId) => onProductSelect(index, productId)}
             onAddNew={(search) => onAddNewProduct(index, search)}
             productTriggerId={item._key}
@@ -156,6 +168,7 @@ function SortableLineItem({
           <NumberInput
             value={item.quantity}
             min={0}
+            data-line-item-quantity
             onValueChange={(v) => onUpdateItem(index, "quantity", v)}
             aria-invalid={!!errors[`item_${index}_quantity`]}
           />
@@ -166,10 +179,18 @@ function SortableLineItem({
             value={item.unit}
             onChange={(e) => onUpdateItem(index, "unit", e.target.value)}
             className="form-select"
+            disabled={!!item.product_id}
           >
-            <option value="nos">nos</option>
-            <option value="kg">kg</option>
-            <option value="box">box</option>
+            {!PRODUCT_UNITS.some((unit) => unit === item.unit) && (
+              <option value={item.unit} disabled>
+                {item.unit}
+              </option>
+            )}
+            {PRODUCT_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -201,11 +222,13 @@ function SortableLineItem({
           </Button>
         </div>
       </div>
-      {(errors[`item_${index}_description`] ||
+      {(errors[`item_${index}_product`] ||
+        errors[`item_${index}_description`] ||
         errors[`item_${index}_quantity`] ||
         errors[`item_${index}_unit_price`]) && (
         <p className="text-xs text-destructive pl-0.5 animate-slide-down">
-          {errors[`item_${index}_description`] ||
+          {errors[`item_${index}_product`] ||
+            errors[`item_${index}_description`] ||
             errors[`item_${index}_quantity`] ||
             errors[`item_${index}_unit_price`]}
         </p>
@@ -251,6 +274,8 @@ export default function InvoiceForm({ onSave }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const customerPricingRequestRef = useRef(0);
+  const itemPricingRequestsRef = useRef(new Map<string, number>());
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -318,7 +343,12 @@ export default function InvoiceForm({ onSave }: Props) {
       if (!f.issue_date) newErrors.issue_date = t("validation.issue_date_required");
       if (f.due_date && f.due_date < f.issue_date)
         newErrors.due_date = t("validation.due_date_after_issue");
+      const selectedProducts = new Set<string>();
       itms.forEach((item, i) => {
+        if (item.product_id && selectedProducts.has(item.product_id)) {
+          newErrors[`item_${i}_product`] = t("validation.duplicate_product");
+        }
+        if (item.product_id) selectedProducts.add(item.product_id);
         if (!item.description.trim())
           newErrors[`item_${i}_description`] = t("validation.description_required");
         if (item.quantity <= 0) newErrors[`item_${i}_quantity`] = t("validation.must_be_positive");
@@ -492,19 +522,28 @@ export default function InvoiceForm({ onSave }: Props) {
   const handleProductSelect = async (index: number, productId: string) => {
     const itemKey = items[index]?._key;
     if (!itemKey) return;
+    if (items.some((item) => item._key !== itemKey && item.product_id === productId)) {
+      toast.error(t("validation.duplicate_product"));
+      return;
+    }
     try {
-      const { data: product } = await api.getProduct(productId);
+      const { data: product } = await api.getProduct(productId, form.customer_id || undefined);
+      if (product.is_active !== 1 && product.is_active !== true && product.is_active !== "1") {
+        toast.error(t("validation.inactive_product"));
+        return;
+      }
       setProducts((current) => [...current.filter((item: any) => item.id !== product.id), product]);
       const taxDef = taxDefs.find((tax: any) => tax.id === product.tax_id);
       setItems((current) =>
         current.map((item) =>
-          item._key === itemKey
+          item._key === itemKey &&
+          !current.some((other) => other._key !== itemKey && other.product_id === productId)
             ? {
                 ...item,
                 product_id: productId,
                 description: product.name,
-                unit_price: product.unit_price,
-                unit: product.unit,
+                unit_price: product.customer_unit_price ?? product.unit_price,
+                unit: product.customer_unit ?? product.unit,
                 tax_id: product.tax_id || "",
                 tax_rate: taxDef?.rate || 0,
               }
@@ -517,6 +556,7 @@ export default function InvoiceForm({ onSave }: Props) {
   };
 
   const updateItem = (index: number, field: string, value: any) => {
+    const currentItem = items[index];
     const newItems = [...items];
     (newItems[index] as any)[field] = value;
     if (field === "tax_id") {
@@ -525,6 +565,31 @@ export default function InvoiceForm({ onSave }: Props) {
     }
     setItems(newItems);
     markTouched(`item_${index}_${field}`);
+    if (field === "unit" && currentItem?.product_id) {
+      const { _key, product_id: productId } = currentItem;
+      const requestId = (itemPricingRequestsRef.current.get(_key) ?? 0) + 1;
+      itemPricingRequestsRef.current.set(_key, requestId);
+      api
+        .getProduct(productId, form.customer_id || undefined, String(value))
+        .then(({ data: product }) => {
+          if (itemPricingRequestsRef.current.get(_key) !== requestId) return;
+          setProducts((current) => [
+            ...current.filter((item: any) => item.id !== product.id),
+            product,
+          ]);
+          setItems((current) =>
+            current.map((item) =>
+              item._key === _key && item.product_id === productId && item.unit === value
+                ? {
+                    ...item,
+                    unit_price: product.customer_unit_price ?? product.unit_price,
+                  }
+                : item,
+            ),
+          );
+        })
+        .catch((err: unknown) => toast.error(formatApiError(err, t)));
+    }
   };
 
   const addItem = useCallback(() => {
@@ -622,6 +687,51 @@ export default function InvoiceForm({ onSave }: Props) {
   const handleCustomerChange = (customerId: string) => {
     markTouched("customer_id");
     setForm((f) => ({ ...f, customer_id: customerId }));
+    const requestId = ++customerPricingRequestRef.current;
+    const selectedItems = items.filter((item) => item.product_id);
+    for (const item of selectedItems) {
+      itemPricingRequestsRef.current.set(
+        item._key,
+        (itemPricingRequestsRef.current.get(item._key) ?? 0) + 1,
+      );
+    }
+    if (selectedItems.length > 0) {
+      Promise.all(
+        selectedItems.map(async (item) => ({
+          item,
+          product: (await api.getProduct(item.product_id, customerId || undefined, item.unit)).data,
+        })),
+      )
+        .then((results) => {
+          if (requestId !== customerPricingRequestRef.current) return;
+          setProducts((current) =>
+            results.reduce(
+              (merged, result) => [
+                ...merged.filter((product: any) => product.id !== result.product.id),
+                result.product,
+              ],
+              current,
+            ),
+          );
+          setItems((current) =>
+            current.map((item) => {
+              const result = results.find(
+                ({ item: selected }) =>
+                  selected._key === item._key &&
+                  selected.product_id === item.product_id &&
+                  selected.unit === item.unit,
+              );
+              return result
+                ? {
+                    ...item,
+                    unit_price: result.product.customer_unit_price ?? result.product.unit_price,
+                  }
+                : item;
+            }),
+          );
+        })
+        .catch((err: unknown) => toast.error(formatApiError(err, t)));
+    }
     if (customerId) {
       api.getCustomer(customerId).then((r) => {
         setAvailableCredit(Math.max(0, Number(r.data.available_credit) || 0));
@@ -721,6 +831,7 @@ export default function InvoiceForm({ onSave }: Props) {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
+    let createdInvoiceId: string | null = null;
     try {
       const data = buildPayload();
       let result;
@@ -730,12 +841,19 @@ export default function InvoiceForm({ onSave }: Props) {
         setSaveStatus("saved");
       } else {
         result = await api.createInvoice(data);
-        if (result?.data?.id) markRowHighlight("invoice", result.data.id);
+        const createdId = result.data.id;
+        if (typeof createdId !== "string" || !createdId) {
+          throw new Error("Created invoice response did not include an ID");
+        }
+        createdInvoiceId = createdId;
+        markRowHighlight("invoice", createdId);
+        result = await api.markSent(createdId);
       }
-      toast.success(isEdit ? t("invoices.invoice_updated") : t("invoices.invoice_created"));
+      toast.success(isEdit ? t("invoices.invoice_updated") : t("invoices.invoice_created_sent"));
       onSave(result.data.id);
     } catch (err: unknown) {
       toast.error(formatApiError(err, t));
+      if (createdInvoiceId) onSave(createdInvoiceId);
     } finally {
       setLoading(false);
     }
@@ -767,14 +885,14 @@ export default function InvoiceForm({ onSave }: Props) {
             type="submit"
             size="sm"
             disabled={loading}
-            title={`${loading ? t("common.saving") : isEdit ? t("invoices.update_invoice") : t("invoices.save_as_draft")} (Ctrl+S)`}
+            title={`${loading ? t("common.saving") : isEdit ? t("invoices.update_invoice") : t("common.save")} (Ctrl+S)`}
           >
             <Save className="h-4 w-4" />
             {loading
               ? t("common.saving")
               : isEdit
                 ? t("invoices.update_invoice")
-                : t("invoices.save_as_draft")}
+                : t("common.save")}
           </Button>
         </div>
       </div>
@@ -922,6 +1040,9 @@ export default function InvoiceForm({ onSave }: Props) {
                         index={i}
                         isFirst={i === 0}
                         products={products}
+                        disabledProductIds={items
+                          .filter((_, itemIndex) => itemIndex !== i)
+                          .map((lineItem) => lineItem.product_id)}
                         errors={errors}
                         itemCount={items.length}
                         onProductSelect={handleProductSelect}

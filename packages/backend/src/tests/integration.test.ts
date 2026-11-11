@@ -127,6 +127,21 @@ describe("Full Invoice Workflow", () => {
     expect(data.data.items.length).toBe(2);
   });
 
+  test("reject invoice with the same product on multiple line items", async () => {
+    const res = await authed("/api/v1/invoices", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_id: customerId,
+        issue_date: "2026-04-02",
+        items: [
+          { product_id: productId, description: "Web Design", quantity: 1, unit_price: 1500 },
+          { product_id: productId, description: "Web Design again", quantity: 1, unit_price: 1500 },
+        ],
+      }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   test("get invoice", async () => {
     const res = await authed(`/api/v1/invoices/${invoiceId}`);
     expect(res.status).toBe(200);

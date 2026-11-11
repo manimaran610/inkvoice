@@ -434,7 +434,17 @@ export const api = {
     const query = params ? `?${new URLSearchParams(params).toString()}` : "";
     return request<{ success: boolean; data: any }>(`/products${query}`);
   },
-  getProduct: (id: string) => request<{ success: boolean; data: any }>(`/products/${id}`),
+  getProduct: (id: string, customerId?: string, unit?: string) =>
+    request<{ success: boolean; data: any }>(
+      `/products/${id}${
+        customerId || unit
+          ? `?${new URLSearchParams({
+              ...(customerId ? { customer_id: customerId } : {}),
+              ...(unit ? { unit } : {}),
+            }).toString()}`
+          : ""
+      }`,
+    ),
   createProduct: (data: any) =>
     request<{ success: boolean; data: any }>("/products", {
       method: "POST",
@@ -649,13 +659,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ ids, action }),
     }),
-  batchProductPrices: (prices: { id: string; unit_price: number }[]) =>
+  batchProductPrices: (
+    prices: { id: string; unit_price: number; unit?: string }[],
+    customerId?: string,
+  ) =>
     request<{
       success: boolean;
       data: { succeeded: number; failed: number; errors: { id: string; reason: string }[] };
     }>("/products/batch/prices", {
       method: "POST",
-      body: JSON.stringify({ prices }),
+      body: JSON.stringify({ prices, ...(customerId ? { customer_id: customerId } : {}) }),
     }),
   batchUsers: (ids: string[], action: string) =>
     request<{

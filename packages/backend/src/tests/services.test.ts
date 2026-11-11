@@ -113,6 +113,86 @@ describe("Products CRUD", () => {
     expect(secondProductData.data.unit_price).toBe(75);
   });
 
+  test("customer-specific product prices override the common price only for that customer", async () => {
+    const productRes = await authed("/api/v1/products", {
+      method: "POST",
+      body: JSON.stringify({ name: "Customer-priced product", unit_price: 40 }),
+    });
+    const product = (await productRes.json()) as any;
+    const customerRes = await authed("/api/v1/customers", {
+      method: "POST",
+      body: JSON.stringify({ name: "Price override customer" }),
+    });
+    const customer = (await customerRes.json()) as any;
+
+    const updateRes = await authed("/api/v1/products/batch/prices", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_id: customer.data.id,
+        prices: [{ id: product.data.id, unit_price: 25 }],
+      }),
+    });
+    expect(updateRes.status).toBe(200);
+
+    const customerProductRes = await authed(
+      `/api/v1/products/${product.data.id}?customer_id=${customer.data.id}`,
+    );
+    const customerProduct = (await customerProductRes.json()) as any;
+    expect(customerProduct.data.customer_unit_price).toBe(25);
+    expect(customerProduct.data.customer_unit).toBe("piece");
+    expect(customerProduct.data.unit_price).toBe(40);
+
+    const customerListRes = await authed(
+      `/api/v1/products?customer_id=${customer.data.id}&search=Customer-priced`,
+    );
+    const customerList = (await customerListRes.json()) as any;
+    expect(customerList.data.items[0].customer_unit_price).toBe(25);
+
+    const commonProductRes = await authed(`/api/v1/products/${product.data.id}`);
+    const commonProduct = (await commonProductRes.json()) as any;
+    expect(commonProduct.data.unit_price).toBe(40);
+    expect(commonProduct.data.customer_unit_price).toBeNull();
+
+    const boxPriceRes = await authed("/api/v1/products/batch/prices", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_id: customer.data.id,
+        prices: [{ id: product.data.id, unit: "box", unit_price: 32 }],
+      }),
+    });
+    expect(boxPriceRes.status).toBe(200);
+    const boxPrice = await authed(
+      `/api/v1/products/${product.data.id}?customer_id=${customer.data.id}&unit=box`,
+    );
+    expect(((await boxPrice.json()) as any).data.customer_unit_price).toBe(32);
+
+    const defaultUnitPrice = await authed(
+      `/api/v1/products/${product.data.id}?customer_id=${customer.data.id}`,
+    );
+    const updatedProduct = ((await defaultUnitPrice.json()) as any).data;
+    expect(updatedProduct.unit).toBe("piece");
+    expect(updatedProduct.customer_unit).toBe("box");
+    expect(updatedProduct.customer_unit_price).toBe(32);
+
+    const oldUnitPrice = await authed(
+      `/api/v1/products/${product.data.id}?customer_id=${customer.data.id}&unit=piece`,
+    );
+    expect(((await oldUnitPrice.json()) as any).data.customer_unit_price).toBe(25);
+
+    const boxList = await authed(
+      `/api/v1/products?customer_id=${customer.data.id}&unit=box&search=Customer-priced`,
+    );
+    expect(((await boxList.json()) as any).data.items[0].customer_unit_price).toBe(32);
+
+    const preferredUnitList = await authed(
+      `/api/v1/products?customer_id=${customer.data.id}&search=Customer-priced`,
+    );
+    const preferredProduct = ((await preferredUnitList.json()) as any).data.items[0];
+    expect(preferredProduct.unit).toBe("piece");
+    expect(preferredProduct.customer_unit).toBe("box");
+    expect(preferredProduct.customer_unit_price).toBe(32);
+  });
+
   test("update product", async () => {
     const res = await authed(`/api/v1/products/${productId}`, {
       method: "PUT",

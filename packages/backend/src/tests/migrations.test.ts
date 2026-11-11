@@ -126,6 +126,7 @@ describe("schema migration runner", () => {
       "invoice_comments",
       "outgoing_webhooks",
       "webhook_deliveries",
+      "customer_product_prices",
     ];
 
     for (const name of expected) {
@@ -134,6 +135,11 @@ describe("schema migration runner", () => {
         .get(name) as { name: string } | null;
       expect(row?.name).toBe(name);
     }
+
+    const customerPriceColumns = db
+      .query("SELECT name FROM pragma_table_info('customer_product_prices')")
+      .all() as { name: string }[];
+    expect(customerPriceColumns.map((column) => column.name)).toContain("is_default");
   });
 
   test("pre-versioning DB is backfilled instead of re-running migrations", () => {
@@ -300,8 +306,50 @@ describe("schema migration runner", () => {
     ).toThrow();
   });
 
-  test("migrations reach version 32", () => {
-    expect(LATEST_MIGRATION_VERSION).toBe(32);
+  test("migrations reach version 37", () => {
+    expect(LATEST_MIGRATION_VERSION).toBe(37);
+  });
+
+  test("customer price unit migration preserves the default customer unit", () => {
+    runWith(db, () => runMigrations());
+    db.run("INSERT INTO customers (id, name) VALUES (?, ?)", ["price-customer", "Price Customer"]);
+    db.run("INSERT INTO products (id, name, unit) VALUES (?, ?, ?)", [
+      "price-product",
+      "Price Product",
+      "kg",
+    ]);
+    db.run(
+      "INSERT INTO customer_product_prices (customer_id, product_id, unit, unit_price) VALUES (?, ?, ?, ?)",
+      ["price-customer", "price-product", "kg", 12],
+    );
+
+    db.exec(`
+      CREATE TABLE customer_product_prices_legacy (
+        customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        unit_price REAL NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (customer_id, product_id)
+      );
+      INSERT INTO customer_product_prices_legacy (customer_id, product_id, unit_price)
+        SELECT customer_id, product_id, unit_price FROM customer_product_prices;
+      DROP TABLE customer_product_prices;
+      ALTER TABLE customer_product_prices_legacy RENAME TO customer_product_prices;
+    `);
+    db.run("DELETE FROM schema_migrations WHERE version IN (36, 37)");
+
+    runWith(db, () => runMigrations());
+
+    const migrated = db
+      .query(
+        "SELECT unit, unit_price, is_default FROM customer_product_prices WHERE customer_id = ? AND product_id = ?",
+      )
+      .get("price-customer", "price-product") as {
+      unit: string;
+      unit_price: number;
+      is_default: number;
+    };
+    expect(migrated).toEqual({ unit: "kg", unit_price: 12, is_default: 1 });
   });
 
   test("customer_payment_methods has the expected shape", () => {

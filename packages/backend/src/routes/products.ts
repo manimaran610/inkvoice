@@ -15,10 +15,20 @@ products.get("/", requirePermission("products", "read"), (c) => {
   const category = c.req.query("category");
   const active = c.req.query("active");
   const search = c.req.query("search");
+  const customerId = c.req.query("customer_id");
+  const unit = c.req.query("unit");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
   const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || "20", 10) || 20), 100);
 
-  const data = productService.listProducts({ category, active, search, page, limit });
+  const data = productService.listProducts({
+    category,
+    active,
+    search,
+    customerId,
+    unit,
+    page,
+    limit,
+  });
   return c.json({ success: true, data });
 });
 
@@ -294,6 +304,7 @@ products.put("/units/:id", requirePermission("products", "update"), async (c) =>
       ]);
       db.run("UPDATE products SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
       db.run("UPDATE invoice_items SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
+      db.run("UPDATE customer_product_prices SET unit = ? WHERE unit = ?", [parsed.name, row.name]);
       db.exec("COMMIT");
     } catch (err) {
       db.exec("ROLLBACK");
@@ -315,16 +326,24 @@ products.delete("/units/:id", requirePermission("products", "delete"), (c) => {
   } | null;
   if (!row) return c.json({ success: false, error: "Unit not found" }, 404);
   if (row.is_builtin) return c.json({ success: false, error: "Cannot delete built-in unit" }, 409);
-  const usage = db.query("SELECT COUNT(*) as count FROM products WHERE unit = ?").get(row.name) as {
-    count: number;
-  };
+  const usage = db
+    .query(
+      `SELECT
+        (SELECT COUNT(*) FROM products WHERE unit = ?) +
+        (SELECT COUNT(*) FROM customer_product_prices WHERE unit = ?) AS count`,
+    )
+    .get(row.name, row.name) as { count: number };
   if (usage.count > 0) return c.json({ success: false, error: "Unit is in use by products" }, 409);
   db.run("DELETE FROM product_units WHERE id = ?", [id]);
   return c.json({ success: true });
 });
 
 products.get("/:id", requirePermission("products", "read"), (c) => {
-  const product = productService.getProduct(c.req.param("id"));
+  const product = productService.getProduct(
+    c.req.param("id"),
+    c.req.query("customer_id"),
+    c.req.query("unit"),
+  );
   if (!product) {
     return c.json({ success: false, error: "Product not found" }, 404);
   }
@@ -344,11 +363,13 @@ const productSchema = z.object({
 });
 
 const batchPriceSchema = z.object({
+  customer_id: z.string().min(1).optional(),
   prices: z
     .array(
       z.object({
         id: z.string().min(1),
         unit_price: z.number().min(0),
+        unit: z.string().min(1).max(20).optional(),
       }),
     )
     .min(1)
@@ -392,20 +413,55 @@ products.post("/batch/prices", requirePermission("products", "update"), async (c
   const body = await c.req.json();
   const parsed = batchPriceSchema.parse(body);
   const db = getDb();
-  const updatePrice = db.query(
-    "UPDATE products SET unit_price = ?, updated_at = datetime('now') WHERE id = ?",
+  if (parsed.customer_id) {
+    const customer = db.query("SELECT id FROM customers WHERE id = ?").get(parsed.customer_id);
+    if (!customer) return c.json({ success: false, error: "Customer not found" }, 404);
+  }
+  const updateDefaultPrice = db.query(
+    "UPDATE products SET unit_price = ?, unit = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+  const updateProductUnit = db.query(
+    "UPDATE products SET unit = ?, updated_at = datetime('now') WHERE id = ?",
+  );
+  const updateCustomerPrice = db.query(
+    `INSERT INTO customer_product_prices (customer_id, product_id, unit, unit_price, is_default, updated_at)
+     VALUES (?, ?, ?, ?, 1, datetime('now'))
+     ON CONFLICT(customer_id, product_id, unit) DO UPDATE SET
+       unit_price = excluded.unit_price, is_default = 1, updated_at = datetime('now')`,
+  );
+  const clearCustomerDefaultUnit = db.query(
+    "UPDATE customer_product_prices SET is_default = 0 WHERE customer_id = ? AND product_id = ? AND is_default = 1",
+  );
+  const productExists = db.query(
+    `SELECT p.id, p.unit,
+       (SELECT cp.unit FROM customer_product_prices cp
+        WHERE cp.customer_id = ? AND cp.product_id = p.id AND cp.is_default = 1) AS customer_unit
+     FROM products p WHERE p.id = ?`,
   );
   const errors: { id: string; reason: string }[] = [];
   let succeeded = 0;
 
   db.exec("BEGIN");
   try {
-    for (const { id, unit_price } of parsed.prices) {
-      const result = updatePrice.run(unit_price, id);
-      if (result.changes > 0) {
+    for (const { id, unit_price, unit } of parsed.prices) {
+      const product = productExists.get(parsed.customer_id ?? null, id) as {
+        id: string;
+        unit: string;
+        customer_unit: string | null;
+      } | null;
+      if (!product) {
+        errors.push({ id, reason: "Product not found" });
+        continue;
+      }
+
+      if (parsed.customer_id) {
+        const selectedUnit = unit ?? product.customer_unit ?? product.unit;
+        clearCustomerDefaultUnit.run(parsed.customer_id, id);
+        updateCustomerPrice.run(parsed.customer_id, id, selectedUnit, unit_price);
         succeeded++;
       } else {
-        errors.push({ id, reason: "Product not found" });
+        updateDefaultPrice.run(unit_price, unit ?? product.unit, id);
+        succeeded++;
       }
     }
     db.exec("COMMIT");

@@ -1151,6 +1151,27 @@ const MIGRATIONS: Migration[] = [
       addColumnIfMissing(db, "invoices", "use_tamil_product_names", "INTEGER DEFAULT 0");
     },
   },
+  {
+    version: 35,
+    name: "customer_product_prices",
+    up: (db) => {
+      createCustomerProductPrices(db);
+    },
+  },
+  {
+    version: 36,
+    name: "customer_product_price_units",
+    up: (db) => {
+      addCustomerProductPriceUnits(db);
+    },
+  },
+  {
+    version: 37,
+    name: "customer_product_default_units",
+    up: (db) => {
+      addCustomerProductDefaultUnits(db);
+    },
+  },
 ];
 
 export const LATEST_MIGRATION_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -1175,8 +1196,13 @@ function tableExists(db: Database, name: string): boolean {
 // known migration as applied so future boots only run new versions.
 function backfillExistingDb(db: Database): void {
   // Pre-versioning databases skip migration handlers, so ensure this new column exists.
-  addColumnIfMissing(db, "products", "tamil_name", "TEXT");
-  addColumnIfMissing(db, "invoices", "use_tamil_product_names", "INTEGER DEFAULT 0");
+  if (tableExists(db, "products")) addColumnIfMissing(db, "products", "tamil_name", "TEXT");
+  if (tableExists(db, "invoices")) {
+    addColumnIfMissing(db, "invoices", "use_tamil_product_names", "INTEGER DEFAULT 0");
+  }
+  createCustomerProductPrices(db);
+  addCustomerProductPriceUnits(db);
+  addCustomerProductDefaultUnits(db);
   for (const m of MIGRATIONS) {
     db.run(`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`, [
       m.version,
@@ -1184,6 +1210,79 @@ function backfillExistingDb(db: Database): void {
       "backfilled",
     ]);
   }
+}
+
+function createCustomerProductPrices(db: Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS customer_product_prices (
+      customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      unit_price REAL NOT NULL CHECK (unit_price >= 0),
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (customer_id, product_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_product_prices_product
+      ON customer_product_prices(product_id);
+  `);
+}
+
+function addCustomerProductPriceUnits(db: Database): void {
+  if (!tableExists(db, "products")) return;
+  if (!tableExists(db, "customer_product_prices")) {
+    db.exec(`
+      CREATE TABLE customer_product_prices (
+        customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        unit TEXT NOT NULL,
+        unit_price REAL NOT NULL CHECK (unit_price >= 0),
+        updated_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (customer_id, product_id, unit)
+      );
+    `);
+  }
+  const hasUnit = db
+    .query(
+      "SELECT COUNT(*) as cnt FROM pragma_table_info('customer_product_prices') WHERE name = ?",
+    )
+    .get("unit") as { cnt: number };
+  if (!hasUnit.cnt) {
+    db.exec(`
+      CREATE TABLE customer_product_prices_with_units (
+        customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        unit TEXT NOT NULL,
+        unit_price REAL NOT NULL CHECK (unit_price >= 0),
+        updated_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (customer_id, product_id, unit)
+      );
+      INSERT INTO customer_product_prices_with_units
+        (customer_id, product_id, unit, unit_price, updated_at)
+      SELECT cp.customer_id, cp.product_id, COALESCE(p.unit, 'piece'), cp.unit_price, cp.updated_at
+      FROM customer_product_prices cp
+      LEFT JOIN products p ON p.id = cp.product_id;
+      DROP TABLE customer_product_prices;
+      ALTER TABLE customer_product_prices_with_units RENAME TO customer_product_prices;
+    `);
+  }
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_customer_product_prices_product
+      ON customer_product_prices(product_id);
+  `);
+}
+
+function addCustomerProductDefaultUnits(db: Database): void {
+  if (!tableExists(db, "products") || !tableExists(db, "customer_product_prices")) return;
+  addColumnIfMissing(db, "customer_product_prices", "is_default", "INTEGER NOT NULL DEFAULT 0");
+  db.exec(`
+    UPDATE customer_product_prices
+    SET is_default = 1
+    WHERE EXISTS (
+      SELECT 1
+      FROM products p
+      WHERE p.id = customer_product_prices.product_id
+        AND p.unit = customer_product_prices.unit
+    );
+  `);
 }
 
 function backupDatabase(): void {
