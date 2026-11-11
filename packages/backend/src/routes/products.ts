@@ -37,6 +37,7 @@ type ProductExportRow = Awaited<ReturnType<typeof productService.listProductsFor
 
 const productCsvColumns: CsvColumn<ProductExportRow>[] = [
   { header: "Name", key: "name" },
+  { header: "Tamil Name", key: "tamil_name" },
   { header: "Description", key: "description" },
   { header: "SKU", key: "sku" },
   { header: "Unit Price", key: "unit_price" },
@@ -61,7 +62,15 @@ products.get("/export/csv", requirePermission("products", "export"), (c) => {
 });
 
 // CSV import (mirror of /customers/import — see comment there for the flow)
-const PRODUCT_FIELDS = ["name", "description", "sku", "unit_price", "unit", "category"] as const;
+const PRODUCT_FIELDS = [
+  "name",
+  "tamil_name",
+  "description",
+  "sku",
+  "unit_price",
+  "unit",
+  "category",
+] as const;
 type ProductField = (typeof PRODUCT_FIELDS)[number];
 
 const productImportSchema = z.object({

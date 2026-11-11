@@ -173,8 +173,8 @@ describe("POST /customers/import (real insert)", () => {
 });
 
 describe("POST /products/import", () => {
-  test("auto-maps Price → unit_price and inserts on dry_run=false", async () => {
-    const csv = "Title,Price,SKU\nWidget,19.99,W-1\nGadget,49.50,G-2";
+  test("auto-maps product fields, imports Tamil names, and exports them", async () => {
+    const csv = "Title,Tamil Name,Price,SKU\nWidget,விட்ஜெட்,19.99,W-1\nGadget,கேட்ஜெட்,49.50,G-2";
     // First check the suggested mapping
     const formData = new FormData();
     formData.append("csv", new Blob([csv], { type: "text/csv" }), "products.csv");
@@ -187,8 +187,9 @@ describe("POST /products/import", () => {
       data: { suggested_mapping: Record<string, string> };
     };
     expect(preview.data.suggested_mapping["0"]).toBe("name"); // Title alias
-    expect(preview.data.suggested_mapping["1"]).toBe("unit_price"); // Price alias
-    expect(preview.data.suggested_mapping["2"]).toBe("sku");
+    expect(preview.data.suggested_mapping["1"]).toBe("tamil_name");
+    expect(preview.data.suggested_mapping["2"]).toBe("unit_price"); // Price alias
+    expect(preview.data.suggested_mapping["3"]).toBe("sku");
 
     const before = (getDb().query("SELECT COUNT(*) as c FROM products").get() as { c: number }).c;
     const importRes = await app.request("/api/v1/products/import", {
@@ -206,9 +207,19 @@ describe("POST /products/import", () => {
     expect(after).toBe(before + 2);
 
     const widget = getDb()
-      .query("SELECT name, unit_price, sku FROM products WHERE name = 'Widget'")
-      .get() as { name: string; unit_price: number; sku: string };
+      .query("SELECT name, tamil_name, unit_price, sku FROM products WHERE name = 'Widget'")
+      .get() as { name: string; tamil_name: string; unit_price: number; sku: string };
+    expect(widget.tamil_name).toBe("விட்ஜெட்");
     expect(widget.unit_price).toBe(19.99);
     expect(widget.sku).toBe("W-1");
+
+    const exportRes = await app.request("/api/v1/products/export/csv?search=Widget", {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(exportRes.status).toBe(200);
+    const exported = parseCsv(await exportRes.text());
+    const tamilNameIndex = exported.headers.indexOf("Tamil Name");
+    expect(tamilNameIndex).toBeGreaterThanOrEqual(0);
+    expect(exported.rows[0][tamilNameIndex]).toBe("விட்ஜெட்");
   });
 });
