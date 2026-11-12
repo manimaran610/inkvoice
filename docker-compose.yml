@@ -1,19 +1,19 @@
 services:
   app:
-    image: ghcr.io/manimaran610/inkvoice:latest
+    image: ghcr.io/manimaran610/inkvoice:skv
     pull_policy: missing
     ports:
-      - "3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - invoice-data:/app/data
     environment:
       # Left empty so the app owns the defaults (admin/changeme, or demo/demo
       # when DEMO_MODE=true). Set them in .env to override.
-      ADMIN_USER: ${ADMIN_USER:-}
-      ADMIN_PASS: ${ADMIN_PASS:-}
+      ADMIN_USER: "admin"
+      ADMIN_PASS: "admin@123"
       # Required. No fallback on purpose: a shipped default secret would be
       # public knowledge. Generate one with: openssl rand -base64 48
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, minimum 32 characters}
+      JWT_SECRET: "uLpXbbJjEPtbXFD7A5ZSamKDR8sAEBM8II03nYWZEfV"
       DATABASE_PATH: /app/data/invoice.db
       PORT: "3000"
       HOST: 0.0.0.0
