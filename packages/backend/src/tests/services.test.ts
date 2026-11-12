@@ -295,7 +295,7 @@ describe("Users CRUD", () => {
       method: "POST",
       body: JSON.stringify({
         username: "testuser",
-        password: "testpassword12",
+        password: "test12",
         email: "test@example.com",
       }),
     });
