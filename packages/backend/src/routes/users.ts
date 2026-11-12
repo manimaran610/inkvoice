@@ -62,7 +62,7 @@ const createUserSchema = z.object({
   username: z.string().min(1).max(50),
   email: z.string().email().optional().or(z.literal("")),
   display_name: z.string().max(100).optional().or(z.literal("")),
-  password: z.string().min(12, "Password must be at least 12 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   is_admin: z.number().min(0).max(1).optional(),
   role: ROLE_ENUM.optional(),
 });
