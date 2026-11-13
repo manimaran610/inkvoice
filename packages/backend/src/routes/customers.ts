@@ -6,6 +6,7 @@ import * as customerService from "../services/customer.service";
 import { deleteMethod, listMethodsForCustomer } from "../services/customer-payment-method.service";
 import { buildStatementData, renderStatementHtml } from "../services/statement.service";
 import { getTagsForItem, setItemTags } from "../services/tag.service";
+import * as templateService from "../services/template.service";
 import type { Customer } from "../types/customer";
 import { buildCsv, type CsvColumn, csvHeaders } from "../utils/csv";
 import { parseCsv } from "../utils/csv-parser";
@@ -198,6 +199,29 @@ customers.put("/:id", requirePermission("customers", "update"), async (c) => {
     metadata: { customer_name: customer.name },
   });
   return c.json({ success: true, data: customer });
+});
+
+customers.put("/:id/default-template", requirePermission("customers", "update"), async (c) => {
+  const { default_template_id } = z
+    .object({ default_template_id: z.string().max(64).nullable() })
+    .parse(await c.req.json());
+  if (default_template_id && !templateService.getTemplate(default_template_id)) {
+    return c.json({ success: false, error: "Template not found" }, 400);
+  }
+
+  const id = c.req.param("id");
+  if (!customerService.updateCustomerDefaultTemplate(id, default_template_id)) {
+    return c.json({ success: false, error: "Customer not found" }, 404);
+  }
+  logActivity({
+    user_id: c.get("userId"),
+    user_name: c.get("user")?.username,
+    action: "updated",
+    resource_type: "customer",
+    resource_id: id,
+    metadata: { field: "default_template_id" },
+  });
+  return c.json({ success: true, data: { default_template_id } });
 });
 
 // Replace tags on a customer (full replace, no status restrictions).

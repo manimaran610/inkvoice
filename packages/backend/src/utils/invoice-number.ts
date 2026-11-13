@@ -16,8 +16,19 @@ const DEFAULT_CREDIT_NOTE_NUMBER_PATTERN = "CN-{YYYY}-{SEQ4}";
 
 function renderPattern(pattern: string, nextSequence: (prefix: string) => number): string {
   const now = new Date();
+  const configuredStartMonth = Number(getSetting("fiscal_year_start_month") || "1");
+  const fiscalYearStartMonth = Number.isFinite(configuredStartMonth)
+    ? Math.min(12, Math.max(1, Math.floor(configuredStartMonth)))
+    : 1;
+  const fiscalYearStartYear =
+    now.getMonth() + 1 >= fiscalYearStartMonth ? now.getFullYear() : now.getFullYear() - 1;
 
   let result = pattern;
+  result = result.replace("{FYYYY}", `${fiscalYearStartYear}-${fiscalYearStartYear + 1}`);
+  result = result.replace(
+    "{FYY}",
+    `${String(fiscalYearStartYear).slice(-2)}-${String(fiscalYearStartYear + 1).slice(-2)}`,
+  );
   result = result.replace("{YYYY}", String(now.getFullYear()));
   result = result.replace("{YY}", String(now.getFullYear()).slice(-2));
   result = result.replace("{MM}", String(now.getMonth() + 1).padStart(2, "0"));

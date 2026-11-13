@@ -362,6 +362,9 @@ const tr: TranslationKeys = {
     name: "Ad",
     email: "E-posta",
     phone: "Telefon",
+    invoice_template: "Fatura Şablonu",
+    change_template: "Fatura şablonunu değiştir",
+    template_updated: "Fatura şablonu güncellendi",
     no_customers: "Henüz müşteri yok.",
     empty_title: "Henüz müşteri yok",
     empty_description: "Faturalandırabilmek için önce ilk müşterinizi ekleyin.",
@@ -996,7 +999,7 @@ const tr: TranslationKeys = {
     quote_number_pattern: "Teklif Numara Deseni",
     credit_note_number_pattern: "Alacak Dekontu Numara Deseni",
     pattern_variables:
-      "{YYYY} yıl, {YY} kısa yıl, {MM} ay, {DD} gün, {SEQ} sıra, {SEQ4} dolgulu sıra, {RAND4} rastgele 4 hane",
+      "{YYYY} yıl, {YY} kısa yıl, {FYYYY} mali yıl (ör. 2026-2027), {FYY} kısa mali yıl (ör. 26-27), {MM} ay, {DD} gün, {SEQ} sıra, {SEQ4} dolgulu sıra, {RAND4} rastgele 4 hane",
     preview: "Önizleme:",
     default_payment_terms: "Varsayılan Ödeme Koşulları",
     fiscal_year_start: "Mali Yıl Başlangıcı",

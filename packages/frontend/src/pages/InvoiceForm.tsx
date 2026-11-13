@@ -244,6 +244,7 @@ interface Props {
 export default function InvoiceForm({ onSave }: Props) {
   const { id } = useParams();
   const isEdit = !!id && id !== "new";
+  const previousIsEditRef = useRef(isEdit);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -279,6 +280,7 @@ export default function InvoiceForm({ onSave }: Props) {
 
   const [form, setForm] = useState({
     customer_id: "",
+    template_id: "",
     invoice_number: "",
     issue_date: todayIso(),
     due_date: "",
@@ -293,7 +295,7 @@ export default function InvoiceForm({ onSave }: Props) {
     cash_discount_value: 0,
     cash_discount_days: 0,
     prices_include_tax: false,
-    use_tamil_product_names: true,
+    use_tamil_product_names: false,
     tags: [] as string[],
   });
 
@@ -390,6 +392,8 @@ export default function InvoiceForm({ onSave }: Props) {
   }, []);
 
   useEffect(() => {
+    const wasEditing = previousIsEditRef.current;
+    previousIsEditRef.current = isEdit;
     fetchCustomers();
     api.listProducts({ limit: "1000", active: "true" }).then((r) => setProducts(r.data.items));
     api.listTaxDefinitions().then((r) => setTaxDefs(r.data));
@@ -403,6 +407,7 @@ export default function InvoiceForm({ onSave }: Props) {
         setForm({ ...(draft.form as typeof form), locale: DEFAULT_INVOICE_LOCALE });
         setItems((draft.items as LineItem[]).map((it) => ({ ...it, _key: genKey() })));
       } else {
+        if (wasEditing) setForm((f) => ({ ...f, use_tamil_product_names: false }));
         api.getSettings().then((r) => {
           setForm((f) => {
             const terms = r.data.default_payment_terms || "";
@@ -430,6 +435,7 @@ export default function InvoiceForm({ onSave }: Props) {
         const inv = r.data;
         setForm({
           customer_id: inv.customer_id,
+          template_id: inv.template_id || "",
           invoice_number: inv.invoice_number,
           issue_date: inv.issue_date,
           due_date: inv.due_date || "",
@@ -485,6 +491,7 @@ export default function InvoiceForm({ onSave }: Props) {
       ...form,
       // New invoices omit invoice_number — the backend generates a draft number.
       invoice_number: isEdit ? form.invoice_number : undefined,
+      template_id: form.template_id || null,
       locale: form.locale || DEFAULT_INVOICE_LOCALE,
       discount_type: form.discount_type || null,
       cash_discount_type: form.cash_discount_type || null,
@@ -686,8 +693,12 @@ export default function InvoiceForm({ onSave }: Props) {
 
   const handleCustomerChange = (customerId: string) => {
     markTouched("customer_id");
-    setForm((f) => ({ ...f, customer_id: customerId }));
     const requestId = ++customerPricingRequestRef.current;
+    setForm((f) => ({
+      ...f,
+      customer_id: customerId,
+      template_id: "",
+    }));
     const selectedItems = items.filter((item) => item.product_id);
     for (const item of selectedItems) {
       itemPricingRequestsRef.current.set(
@@ -733,10 +744,15 @@ export default function InvoiceForm({ onSave }: Props) {
         .catch((err: unknown) => toast.error(formatApiError(err, t)));
     }
     if (customerId) {
-      api.getCustomer(customerId).then((r) => {
-        setAvailableCredit(Math.max(0, Number(r.data.available_credit) || 0));
-        setPeppolUnreachable(r.data.einvoice_receiver_id && r.data.peppol_reachable === 0);
-      });
+      api
+        .getCustomer(customerId)
+        .then((r) => {
+          if (requestId !== customerPricingRequestRef.current) return;
+          setForm((f) => ({ ...f, template_id: r.data.default_template_id || "" }));
+          setAvailableCredit(Math.max(0, Number(r.data.available_credit) || 0));
+          setPeppolUnreachable(r.data.einvoice_receiver_id && r.data.peppol_reachable === 0);
+        })
+        .catch((err: unknown) => toast.error(formatApiError(err, t)));
     } else {
       setAvailableCredit(0);
       setPeppolUnreachable(false);

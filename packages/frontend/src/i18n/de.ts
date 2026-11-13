@@ -377,6 +377,9 @@ const de: TranslationKeys = {
     name: "Name",
     email: "E-Mail",
     phone: "Telefon",
+    invoice_template: "Rechnungsvorlage",
+    change_template: "Rechnungsvorlage ändern",
+    template_updated: "Rechnungsvorlage aktualisiert",
     no_customers: "Noch keine Kunden.",
     empty_title: "Noch keine Kunden",
     empty_description: "Fügen Sie Ihren ersten Kunden hinzu, um Rechnungen stellen zu können.",
@@ -1024,7 +1027,7 @@ const de: TranslationKeys = {
     quote_number_pattern: "Angebotsnummern-Muster",
     credit_note_number_pattern: "Gutschriftsnummern-Muster",
     pattern_variables:
-      "{YYYY} Jahr, {YY} kurzes Jahr, {MM} Monat, {DD} Tag, {SEQ} laufende Nummer, {SEQ4} aufgefüllte Nummer, {RAND4} 4 Zufallsziffern",
+      "{YYYY} Jahr, {YY} kurzes Jahr, {FYYYY} Geschäftsjahr (z. B. 2026-2027), {FYY} kurzes Geschäftsjahr (z. B. 26-27), {MM} Monat, {DD} Tag, {SEQ} laufende Nummer, {SEQ4} aufgefüllte Nummer, {RAND4} 4 Zufallsziffern",
     preview: "Vorschau:",
     default_payment_terms: "Standard-Zahlungsbedingungen",
     fiscal_year_start: "Beginn des Geschäftsjahres",

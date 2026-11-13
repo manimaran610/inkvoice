@@ -365,6 +365,9 @@ const es: TranslationKeys = {
     name: "Nombre",
     email: "Correo electrónico",
     phone: "Teléfono",
+    invoice_template: "Plantilla de factura",
+    change_template: "Cambiar plantilla de factura",
+    template_updated: "Plantilla de factura actualizada",
     no_customers: "Aún no hay clientes.",
     empty_title: "Aún no hay clientes",
     empty_description: "Añada su primer cliente para poder facturarle.",
@@ -1011,7 +1014,7 @@ const es: TranslationKeys = {
     quote_number_pattern: "Patrón de numeración de presupuestos",
     credit_note_number_pattern: "Patrón de numeración de notas de crédito",
     pattern_variables:
-      "{YYYY} año, {YY} año corto, {MM} mes, {DD} día, {SEQ} secuencia, {SEQ4} secuencia con ceros, {RAND4} 4 dígitos aleatorios",
+      "{YYYY} año, {YY} año corto, {FYYYY} ejercicio fiscal (p. ej. 2026-2027), {FYY} ejercicio fiscal corto (p. ej. 26-27), {MM} mes, {DD} día, {SEQ} secuencia, {SEQ4} secuencia con ceros, {RAND4} 4 dígitos aleatorios",
     preview: "Vista previa:",
     default_payment_terms: "Condiciones de pago predeterminadas",
     fiscal_year_start: "Inicio del ejercicio fiscal",

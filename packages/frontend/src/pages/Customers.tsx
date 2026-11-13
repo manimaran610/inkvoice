@@ -31,6 +31,11 @@ import CustomerForm from "@/pages/CustomerForm";
 export default function Customers() {
   const { t } = useTranslation();
   const [customers, setCustomers] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<
+    { id: string; name: string; is_default: number; type: string }[]
+  >([]);
+  const [editingTemplateCustomerId, setEditingTemplateCustomerId] = useState<string | null>(null);
+  const [savingTemplateCustomerId, setSavingTemplateCustomerId] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -67,6 +72,12 @@ export default function Customers() {
     api.listTags().then((r) => setTagSuggestions(r.data.map((t) => t.name)));
   }, []);
   useEffect(() => {
+    api
+      .listTemplates()
+      .then((r) => setTemplates(r.data.filter((template: any) => template.type !== "builtin")))
+      .catch((err: unknown) => toast.error(formatApiError(err, t)));
+  }, [t]);
+  useEffect(() => {
     setSelected(new Set());
   }, []);
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -87,6 +98,7 @@ export default function Customers() {
     { key: "email", label: t("customers.email") },
     { key: "phone", label: t("customers.phone") },
     { key: "invoice_count", label: t("nav.invoices") },
+    { key: "invoice_template", label: t("customers.invoice_template") },
   ];
   const { isVisible: isColVisible } = useColumnVisibility("inkvoice-cols-customers");
   const visibleColCount = 1 + customerColumns.filter((c) => isColVisible(c.key)).length + 1; // checkbox + actions
@@ -160,6 +172,26 @@ export default function Customers() {
     } finally {
       setActionLoading(false);
       setBatchDeleteOpen(false);
+    }
+  };
+
+  const handleTemplateChange = async (customerId: string, templateId: string) => {
+    setSavingTemplateCustomerId(customerId);
+    try {
+      await api.setCustomerDefaultTemplate(customerId, templateId || null);
+      setCustomers((current) =>
+        current.map((customer) =>
+          customer.id === customerId
+            ? { ...customer, default_template_id: templateId || null }
+            : customer,
+        ),
+      );
+      setEditingTemplateCustomerId(null);
+      toast.success(t("customers.template_updated"));
+    } catch (err: unknown) {
+      toast.error(formatApiError(err, t));
+    } finally {
+      setSavingTemplateCustomerId(null);
     }
   };
 
@@ -269,6 +301,11 @@ export default function Customers() {
                   className="text-right"
                 />
               )}
+              {isColVisible("invoice_template") && (
+                <TableCell className="font-medium text-sm text-muted-foreground">
+                  {t("customers.invoice_template")}
+                </TableCell>
+              )}
               <TableCell className="w-[100px] font-medium text-sm text-muted-foreground">
                 {t("common.actions")}
               </TableCell>
@@ -329,6 +366,56 @@ export default function Customers() {
                     ) : (
                       <span className="text-muted-foreground">0</span>
                     )}
+                  </TableCell>
+                )}
+                {isColVisible("invoice_template") && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2">
+                      {editingTemplateCustomerId === c.id ? (
+                        <select
+                          aria-label={t("customers.invoice_template")}
+                          value={
+                            templates.some((template) => template.id === c.default_template_id)
+                              ? c.default_template_id
+                              : ""
+                          }
+                          disabled={savingTemplateCustomerId === c.id}
+                          onChange={(e) => handleTemplateChange(c.id, e.target.value)}
+                          onBlur={() => {
+                            if (savingTemplateCustomerId !== c.id) {
+                              setEditingTemplateCustomerId(null);
+                            }
+                          }}
+                          className="form-select min-w-36"
+                        >
+                          <option value="">{t("customers.default_template_inherit")}</option>
+                          {templates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                              {template.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <span className="text-muted-foreground">
+                            {(
+                              templates.find((template) => template.id === c.default_template_id) ||
+                              templates.find((template) => template.is_default)
+                            )?.name || t("customers.default_template_inherit")}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("customers.change_template")}
+                            title={t("customers.change_template")}
+                            onClick={() => setEditingTemplateCustomerId(c.id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 )}
                 <TableCell onClick={(e) => e.stopPropagation()}>

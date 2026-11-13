@@ -359,6 +359,9 @@ const en = {
     name: "Name",
     email: "Email",
     phone: "Phone",
+    invoice_template: "Invoice Template",
+    change_template: "Change invoice template",
+    template_updated: "Invoice template updated",
     no_customers: "No customers yet.",
     empty_title: "No customers yet",
     empty_description: "Add your first customer so you can bill them.",
@@ -997,7 +1000,7 @@ const en = {
     quote_number_pattern: "Quote Number Pattern",
     credit_note_number_pattern: "Credit Note Number Pattern",
     pattern_variables:
-      "{YYYY} year, {YY} short year, {MM} month, {DD} day, {SEQ} sequence, {SEQ4} padded sequence, {RAND4} random 4 digits",
+      "{YYYY} year, {YY} short year, {FYYYY} fiscal year (e.g. 2026-2027), {FYY} short fiscal year (e.g. 26-27), {MM} month, {DD} day, {SEQ} sequence, {SEQ4} padded sequence, {RAND4} random 4 digits",
     preview: "Preview:",
     default_payment_terms: "Default Payment Terms",
     fiscal_year_start: "Fiscal Year Start",

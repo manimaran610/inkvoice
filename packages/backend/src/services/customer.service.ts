@@ -170,6 +170,12 @@ type CustomerInput = Partial<Customer> & { tags?: string[] };
 export function createCustomer(data: CustomerInput): Customer & { tags: string[] } {
   const db = getDb();
   const id = crypto.randomBytes(16).toString("hex");
+  const defaultTemplate =
+    data.default_template_id === undefined
+      ? (db.query("SELECT id FROM templates WHERE is_default = 1 LIMIT 1").get() as {
+          id: string;
+        } | null)
+      : null;
 
   db.run(
     `INSERT INTO customers (id, name, email, phone, address_line1, address_line2, city, state, postal_code, country, tax_id, tax_number, einvoice_format, leitweg_id, einvoice_receiver_id, einvoice_receiver_scheme, siren, siret, notes, language, default_template_id, currency)
@@ -195,7 +201,7 @@ export function createCustomer(data: CustomerInput): Customer & { tags: string[]
       data.siret || null,
       data.notes || null,
       data.language || null,
-      data.default_template_id || null,
+      data.default_template_id || defaultTemplate?.id || null,
       data.currency || null,
     ],
   );
@@ -206,6 +212,18 @@ export function createCustomer(data: CustomerInput): Customer & { tags: string[]
     ...(db.query("SELECT * FROM customers WHERE id = ?").get(id) as Customer),
     tags: getTagsForItem(id, "customer"),
   };
+}
+
+export function updateCustomerDefaultTemplate(id: string, templateId: string | null): boolean {
+  const db = getDb();
+  const existing = db.query("SELECT id FROM customers WHERE id = ?").get(id);
+  if (!existing) return false;
+
+  db.run(
+    "UPDATE customers SET default_template_id = ?, updated_at = datetime('now') WHERE id = ?",
+    [templateId, id],
+  );
+  return true;
 }
 
 export function updateCustomer(

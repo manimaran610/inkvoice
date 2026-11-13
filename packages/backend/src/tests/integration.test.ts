@@ -218,6 +218,38 @@ describe("Full Invoice Workflow", () => {
     expect(data.data.total_customers).toBe(2);
   });
 
+  test("new customers use the system default and the customer override can be changed", async () => {
+    const defaultTemplate = getDb()
+      .query("SELECT id FROM templates WHERE is_default = 1 LIMIT 1")
+      .get() as { id: string } | null;
+    expect(defaultTemplate).not.toBeNull();
+
+    const created = await authed("/api/v1/customers", {
+      method: "POST",
+      body: JSON.stringify({ name: "Template Default Customer" }),
+    });
+    expect(created.status).toBe(201);
+    const createdData = (await created.json()) as any;
+    const customerId = createdData.data.id;
+    expect(createdData.data.default_template_id).toBe(defaultTemplate!.id);
+
+    const cleared = await authed(`/api/v1/customers/${customerId}/default-template`, {
+      method: "PUT",
+      body: JSON.stringify({ default_template_id: null }),
+    });
+    expect(cleared.status).toBe(200);
+
+    const restored = await authed(`/api/v1/customers/${customerId}/default-template`, {
+      method: "PUT",
+      body: JSON.stringify({ default_template_id: defaultTemplate!.id }),
+    });
+    expect(restored.status).toBe(200);
+
+    const customer = await authed(`/api/v1/customers/${customerId}`);
+    const customerData = (await customer.json()) as any;
+    expect(customerData.data.default_template_id).toBe(defaultTemplate!.id);
+  });
+
   // Later tests create quotes, so the pattern has to go back to the default.
   function restoreQuotePattern() {
     getDb().run("UPDATE settings SET value = ? WHERE key = ?", [

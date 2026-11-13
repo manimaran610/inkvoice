@@ -342,7 +342,7 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
         data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
-        data.use_tamil_product_names === false ? 0 : 1,
+        data.use_tamil_product_names ? 1 : 0,
         data.template_id || null,
       ],
     );

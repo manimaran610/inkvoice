@@ -25,6 +25,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { type Language, languages, useTranslation } from "@/i18n";
+import { parseFiscalYearStartMonth, startOfFiscalYear } from "@/lib/fiscal-year";
 import { formatApiError } from "@/lib/format-api-error";
 import ProductSettings from "@/pages/ProductSettings";
 import { getSettingsTabs } from "@/pages/settings-tab-registry";
@@ -40,10 +41,19 @@ function isLightColor(hex: string): boolean {
   return r * 0.299 + g * 0.587 + b * 0.114 > 160;
 }
 
-function previewNumberPattern(pattern: string): string {
+function previewNumberPattern(pattern: string, fiscalYearStartMonth?: string): string {
   if (!pattern) return "";
   const now = new Date();
+  const fiscalYearStartYear = startOfFiscalYear(
+    now,
+    parseFiscalYearStartMonth(fiscalYearStartMonth),
+  ).getFullYear();
   let result = pattern;
+  result = result.replace("{FYYYY}", `${fiscalYearStartYear}-${fiscalYearStartYear + 1}`);
+  result = result.replace(
+    "{FYY}",
+    `${String(fiscalYearStartYear).slice(-2)}-${String(fiscalYearStartYear + 1).slice(-2)}`,
+  );
   result = result.replace("{YYYY}", String(now.getFullYear()));
   result = result.replace("{YY}", String(now.getFullYear()).slice(-2));
   result = result.replace("{MM}", String(now.getMonth() + 1).padStart(2, "0"));
@@ -916,7 +926,10 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground">
                     {t("settings.preview")}{" "}
                     <span className="font-medium text-foreground">
-                      {previewNumberPattern(settings.invoice_number_pattern)}
+                      {previewNumberPattern(
+                        settings.invoice_number_pattern,
+                        settings.fiscal_year_start_month,
+                      )}
                     </span>
                   </p>
                 )}
@@ -931,7 +944,10 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground">
                     {t("settings.preview")}{" "}
                     <span className="font-medium text-foreground">
-                      {previewNumberPattern(settings.quote_number_pattern)}
+                      {previewNumberPattern(
+                        settings.quote_number_pattern,
+                        settings.fiscal_year_start_month,
+                      )}
                     </span>
                   </p>
                 )}
@@ -946,7 +962,10 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground">
                     {t("settings.preview")}{" "}
                     <span className="font-medium text-foreground">
-                      {previewNumberPattern(settings.credit_note_number_pattern)}
+                      {previewNumberPattern(
+                        settings.credit_note_number_pattern,
+                        settings.fiscal_year_start_month,
+                      )}
                     </span>
                   </p>
                 )}

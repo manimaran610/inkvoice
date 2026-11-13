@@ -33,7 +33,7 @@ afterAll(() => {
 });
 
 describe("PDF payment breakdown", () => {
-  test("uses stored Tamil product names only when enabled on an invoice", () => {
+  test("defaults to original product names and uses Tamil names when enabled on an invoice", () => {
     const customer = createCustomer({ name: "Tamil product customer" });
     const product = createProduct({
       name: "Tomato",
@@ -53,11 +53,25 @@ describe("PDF payment breakdown", () => {
       ],
     });
 
-    expect(invoice.use_tamil_product_names).toBe(1);
-    expect(buildInvoiceContext(invoice.id)?.items[0].description).toBe("தக்காளி");
-
-    getDb().run("UPDATE invoices SET use_tamil_product_names = 0 WHERE id = ?", [invoice.id]);
+    expect(invoice.use_tamil_product_names).toBe(0);
     expect(buildInvoiceContext(invoice.id)?.items[0].description).toBe("Tomato");
+
+    const tamilInvoice = createInvoice({
+      customer_id: customer.id,
+      issue_date: "2026-02-01",
+      use_tamil_product_names: true,
+      items: [
+        {
+          product_id: product.id,
+          description: product.name,
+          quantity: 1,
+          unit_price: product.unit_price,
+        },
+      ],
+    });
+
+    expect(tamilInvoice.use_tamil_product_names).toBe(1);
+    expect(buildInvoiceContext(tamilInvoice.id)?.items[0].description).toBe("தக்காளி");
   });
 
   test("buildInvoiceContext exposes payments, amount paid, and balance due", () => {

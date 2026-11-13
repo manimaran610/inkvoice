@@ -386,6 +386,14 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  setCustomerDefaultTemplate: (id: string, default_template_id: string | null) =>
+    request<{ success: boolean; data: { default_template_id: string | null } }>(
+      `/customers/${id}/default-template`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ default_template_id }),
+      },
+    ),
   deleteCustomer: (id: string) => request(`/customers/${id}`, { method: "DELETE" }),
   enableCustomerPortal: (id: string) =>
     request<{

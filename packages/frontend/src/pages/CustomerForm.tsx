@@ -53,7 +53,9 @@ export default function CustomerForm({ onSave }: Props) {
     last_invoice_date: string | null;
   } | null>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [templates, setTemplates] = useState<
+    { id: string; name: string; is_default: number; type: string }[]
+  >([]);
   const [portal, setPortal] = useState<{ enabled: boolean; token: string | null }>({
     enabled: false,
     token: null,
@@ -127,9 +129,26 @@ export default function CustomerForm({ onSave }: Props) {
   });
 
   useEffect(() => {
-    api.listTemplates().then((r) => setTemplates(r.data));
+    api
+      .listTemplates()
+      .then((r) => {
+        const selectableTemplates = r.data.filter((template: any) => template.type !== "builtin");
+        setTemplates(selectableTemplates);
+        if (!isEdit) {
+          setForm((current) =>
+            current.default_template_id
+              ? current
+              : {
+                  ...current,
+                  default_template_id:
+                    selectableTemplates.find((template: any) => template.is_default)?.id || "",
+                },
+          );
+        }
+      })
+      .catch((err: unknown) => toast.error(formatApiError(err, t)));
     api.listTags().then((r) => setTagSuggestions(r.data.map((t) => t.name)));
-  }, []);
+  }, [isEdit, t]);
 
   useEffect(() => {
     if (isEdit) {
@@ -364,7 +383,11 @@ export default function CustomerForm({ onSave }: Props) {
                 hint={t("customers.default_template_hint")}
               >
                 <select
-                  value={form.default_template_id}
+                  value={
+                    templates.some((template) => template.id === form.default_template_id)
+                      ? form.default_template_id
+                      : ""
+                  }
                   onChange={(e) => setForm({ ...form, default_template_id: e.target.value })}
                   className="form-select"
                 >

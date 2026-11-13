@@ -367,6 +367,9 @@ const fr: TranslationKeys = {
     name: "Nom",
     email: "E-mail",
     phone: "Téléphone",
+    invoice_template: "Modèle de facture",
+    change_template: "Modifier le modèle de facture",
+    template_updated: "Modèle de facture mis à jour",
     no_customers: "Aucun client pour l'instant.",
     empty_title: "Aucun client pour l'instant",
     empty_description: "Ajoutez votre premier client pour pouvoir le facturer.",
@@ -1015,7 +1018,7 @@ const fr: TranslationKeys = {
     quote_number_pattern: "Modèle de numérotation des devis",
     credit_note_number_pattern: "Modèle de numérotation des avoirs",
     pattern_variables:
-      "{YYYY} année, {YY} année courte, {MM} mois, {DD} jour, {SEQ} séquence, {SEQ4} séquence complétée, {RAND4} 4 chiffres aléatoires",
+      "{YYYY} année, {YY} année courte, {FYYYY} exercice fiscal (p. ex. 2026-2027), {FYY} exercice fiscal court (p. ex. 26-27), {MM} mois, {DD} jour, {SEQ} séquence, {SEQ4} séquence complétée, {RAND4} 4 chiffres aléatoires",
     preview: "Aperçu :",
     default_payment_terms: "Conditions de paiement par défaut",
     fiscal_year_start: "Début de l'exercice fiscal",

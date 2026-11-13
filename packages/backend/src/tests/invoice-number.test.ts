@@ -35,6 +35,7 @@ afterEach(() => {
     invoice_number_pattern: "INV-{YYYY}-{SEQ4}",
     quote_number_pattern: "QT-{YYYY}-{SEQ4}",
     credit_note_number_pattern: "CN-{YYYY}-{SEQ4}",
+    fiscal_year_start_month: "1",
   });
 });
 
@@ -96,6 +97,20 @@ describe("invoice-number pattern tokens", () => {
     updateSettings({ invoice_number_pattern: `T-{YYYY}{YY}{MM}{DD}-{SEQ4}` });
     const number = generateInvoiceNumber();
     expect(number).toMatch(new RegExp(`^T-${yyyy}${yy}${mm}${dd}-\\d{4}$`));
+  });
+
+  test("fiscal year tokens use the configured fiscal year start month", () => {
+    updateSettings({
+      invoice_number_pattern: "FY-{FYYYY}-{FYY}-{SEQ4}",
+      fiscal_year_start_month: "4",
+    });
+    const now = new Date();
+    const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    const endYear = startYear + 1;
+
+    expect(generateInvoiceNumber()).toBe(
+      `FY-${startYear}-${endYear}-${String(startYear).slice(-2)}-${String(endYear).slice(-2)}-0001`,
+    );
   });
 
   test("RAND4 token produces a 4-digit suffix", () => {
