@@ -282,6 +282,7 @@ export default function InvoiceForm({ onSave }: Props) {
     customer_id: "",
     template_id: "",
     invoice_number: "",
+    purchase_order: "",
     issue_date: todayIso(),
     due_date: "",
     payment_terms: "",
@@ -404,7 +405,12 @@ export default function InvoiceForm({ onSave }: Props) {
       // defaults fetch when restoring avoids clobbering the user's draft.)
       const draft = consumeInvoiceDraft();
       if (draft) {
-        setForm({ ...(draft.form as typeof form), locale: DEFAULT_INVOICE_LOCALE });
+        const draftForm = draft.form as typeof form;
+        setForm({
+          ...draftForm,
+          purchase_order: draftForm.purchase_order || "",
+          locale: DEFAULT_INVOICE_LOCALE,
+        });
         setItems((draft.items as LineItem[]).map((it) => ({ ...it, _key: genKey() })));
       } else {
         if (wasEditing) setForm((f) => ({ ...f, use_tamil_product_names: false }));
@@ -437,6 +443,7 @@ export default function InvoiceForm({ onSave }: Props) {
           customer_id: inv.customer_id,
           template_id: inv.template_id || "",
           invoice_number: inv.invoice_number,
+          purchase_order: inv.purchase_order || "",
           issue_date: inv.issue_date,
           due_date: inv.due_date || "",
           payment_terms: inv.payment_terms || "",
@@ -986,6 +993,14 @@ export default function InvoiceForm({ onSave }: Props) {
                   }
                 />
               )}
+            </FormField>
+            <FormField label={t("invoices.purchase_order")}>
+              <Input
+                value={form.purchase_order}
+                maxLength={100}
+                placeholder={t("invoices.purchase_order_placeholder")}
+                onChange={(e) => setForm({ ...form, purchase_order: e.target.value })}
+              />
             </FormField>
             <FormField label={t("invoices.issue_date")} error={errors.issue_date} required>
               <Input

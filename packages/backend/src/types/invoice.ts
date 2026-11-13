@@ -25,6 +25,7 @@ export interface Invoice {
   amount_paid: number;
   notes: string | null;
   payment_terms: string | null;
+  purchase_order: string | null;
   currency: string;
   /** Base-currency units per 1 unit of `currency`, frozen at issue. 1 = same as base. */
   exchange_rate: number;

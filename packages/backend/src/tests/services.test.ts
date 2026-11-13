@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync } from "node:fs";
 import type { Hono } from "hono";
 import { createApp } from "../app";
 import { closeDatabase, initDatabase } from "../database/connection";
@@ -259,6 +259,44 @@ describe("Templates CRUD", () => {
     const data = (await res.json()) as any;
     expect(data.data.name).toBe("Test Template");
     templateId = data.data.id;
+  });
+
+  test("preview the SKV template with numbered, sorted sample items", async () => {
+    const htmlContent = readFileSync(
+      new URL("../../../../template/skv.html", import.meta.url),
+      "utf8",
+    );
+    const res = await authed("/api/v1/templates/preview", {
+      method: "POST",
+      body: JSON.stringify({ html_content: htmlContent }),
+    });
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("S.No.");
+    expect(html).toContain("Hosting (12 months)");
+    expect(html).toContain("One Thousand Nine Hundred Eighty Only");
+  });
+
+  test("preview the SKS template with invoice number, PO, sorted items, and amount in words", async () => {
+    const htmlContent = readFileSync(
+      new URL("../../../../template/sks.html", import.meta.url),
+      "utf8",
+    );
+    const res = await authed("/api/v1/templates/preview", {
+      method: "POST",
+      body: JSON.stringify({ html_content: htmlContent }),
+    });
+
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Invoice Number");
+    expect(html).toContain("INV-2026-0001");
+    expect(html).toContain("PO-2026-001");
+    expect(html).toContain("One Thousand Nine Hundred Eighty Only");
+    expect(html).toContain("12422002004483");
+    expect(html).toContain("UDYAM-TN-02-0117573");
+    expect(html.indexOf("Hosting (12 months)")).toBeLessThan(html.indexOf("Web Design"));
   });
 
   test("list templates", async () => {

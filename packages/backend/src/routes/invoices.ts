@@ -160,6 +160,7 @@ type InvoiceRow = Invoice & { customer_name: string };
 const invoiceCsvColumns: CsvColumn<InvoiceRow>[] = [
   { header: "Invoice Number", key: "invoice_number" },
   { header: "Customer", key: "customer_name" },
+  { header: "Purchase Order", key: "purchase_order" },
   { header: "Status", key: "status" },
   { header: "Issue Date", key: "issue_date" },
   { header: "Due Date", key: "due_date" },
@@ -247,6 +248,7 @@ const invoiceSchema = z
     invoice_number: z.string().optional(),
     notes: z.string().max(2000).optional().nullable(),
     payment_terms: z.string().max(500).optional().nullable(),
+    purchase_order: z.string().max(100).optional().nullable(),
     currency: z.string().max(3).optional(),
     exchange_rate: z.number().positive().optional(),
     discount_type: z.enum(["percentage", "amount"]).optional().nullable(),

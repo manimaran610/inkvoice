@@ -151,10 +151,15 @@
 
       .items-table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
         border: 1px solid #111;
         font-size: 9pt;
         flex: 1;
+      }
+
+      .items-table thead {
+        display: table-header-group;
       }
 
       .items-table thead th {
@@ -365,9 +370,8 @@
           </div>
           <div class="meta">
             <div>{{#is_quote}}Quote date{{/is_quote}}{{^is_quote}}Invoice date{{/is_quote}}: {{issue_date}}</div>
-            {{#due_date}}
-            <div>{{#is_quote}}Valid until{{/is_quote}}{{^is_quote}}Due date{{/is_quote}}: {{due_date}}</div>
-            {{/due_date}}
+            {{#is_quote}}{{#due_date}}<div>Valid until: {{due_date}}</div>{{/due_date}}{{/is_quote}}
+            {{#purchase_order}}<div>Purchase Order: {{purchase_order}}</div>{{/purchase_order}}
             {{#customer.tax_id}}<div>Customer tax ID: {{customer.tax_id}}</div>{{/customer.tax_id}}
           </div>
         </div>
@@ -409,8 +413,17 @@
       <div class="currency-note">Amount in {{currency}} currency</div>
 
       <table class="items-table">
+        <colgroup>
+          <col style="width: 9%" />
+          <col style="width: 45%" />
+          <col style="width: 13%" />
+          <col style="width: 8%" />
+          <col style="width: 8%" />
+          <col style="width: 17%" />
+        </colgroup>
         <thead>
           <tr>
+            <th class="center">S.No.</th>
             <th class="description">Description</th>
             <th class="num">U.P. (net)</th>
             <th class="num">Qty</th>
@@ -422,13 +435,14 @@
           {{#consolidated}}
           {{#sources}}
           <tr class="group-header">
-            <td colspan="5">
+            <td colspan="6">
               {{invoice_number}}
               {{#issue_date}}<span class="group-issue">&nbsp;&nbsp;{{issue_date}}</span>{{/issue_date}}
             </td>
           </tr>
           {{#items}}
           <tr>
+            <td class="center">{{serial_number}}</td>
             <td class="description">{{description}}</td>
             <td class="num">{{formatted_unit_price}}</td>
             <td class="num">{{quantity}}</td>
@@ -437,22 +451,24 @@
           </tr>
           {{/items}}
           <tr class="group-subtotal">
-            <td colspan="4" class="description">Subtotal</td>
+            <td colspan="5" class="description">Subtotal</td>
             <td class="num">{{formatted_subtotal}}</td>
           </tr>
           {{/sources}}
           {{/consolidated}}
           {{^consolidated}}
-          {{#items}}
+          {{#items_by_name}}
           <tr>
+            <td class="center">{{serial_number}}</td>
             <td class="description">{{description}}</td>
             <td class="num">{{formatted_unit_price}}</td>
             <td class="num">{{quantity}}</td>
             <td class="center">{{unit}}</td>
             <td class="num">{{formatted_line_total}}</td>
           </tr>
-          {{/items}}
+          {{/items_by_name}}
           <tr class="empty-row">
+            <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
@@ -532,6 +548,9 @@
             </tr>
             {{/has_payments}}
           </table>
+          <div style="margin-top: 2mm; font-size: 8.5pt">
+            <strong>Amount in words ({{currency}}):</strong> {{amount_in_words}}
+          </div>
         </div>
       </div>
 

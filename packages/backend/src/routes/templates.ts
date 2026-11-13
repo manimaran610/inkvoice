@@ -169,10 +169,31 @@ const SAMPLE_EPC_PAYLOAD = buildEpcPayload({
 });
 
 function getSampleContext() {
+  const sampleItems = [
+    {
+      description: "Web Design",
+      quantity: 1,
+      unit: "piece",
+      formatted_unit_price: "$1,500.00",
+      tax_rate: 10,
+      formatted_line_total: "$1,500.00",
+    },
+    {
+      description: "Hosting (12 months)",
+      quantity: 12,
+      unit: "month",
+      formatted_unit_price: "$25.00",
+      tax_rate: 10,
+      formatted_line_total: "$300.00",
+    },
+  ];
+
   return {
     invoice_number: "INV-2026-0001",
+    purchase_order: "PO-2026-001",
     issue_date: "Apr 1, 2026",
     due_date: "May 1, 2026",
+    currency: "USD",
     company: {
       name: "My Company",
       logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgNjgiIHdpZHRoPSIxODAiIGhlaWdodD0iNjgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJpdmYtcyIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMGYxNzJhIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzMzNDE1NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iaXZmLWEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjk3MzE2Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2VmNDQ0NCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNiwgNikiPgogICAgPHBhdGggZD0iTTE0IDE2IEMxNCAxNiwgMTggMjAsIDE2IDMyIEMxNCA0NCwgMTAgNTYsIDEyIDYwIiBzdHJva2U9InVybCgjaXZmLXMpIiBzdHJva2Utd2lkdGg9IjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgogICAgPGNpcmNsZSBjeD0iMTYiIGN5PSI4IiByPSI1IiBmaWxsPSJ1cmwoI2l2Zi1hKSIvPgogICAgPGNpcmNsZSBjeD0iMjIiIGN5PSI2IiByPSIyIiBmaWxsPSIjZjk3MzE2IiBvcGFjaXR5PSIwLjQiLz4KICAgIDxjaXJjbGUgY3g9IjEyIiBjeT0iNCIgcj0iMS41IiBmaWxsPSIjZWY0NDQ0IiBvcGFjaXR5PSIwLjMiLz4KICAgIDxwYXRoIGQ9Ik0yNCAxNiBDMjQgMTYsIDMwIDQwLCAzNCA1MiBDMzggNDAsIDQ0IDE2LCA0NCAxNiIgc3Ryb2tlPSJ1cmwoI2l2Zi1zKSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiLz4KICAgIDxwYXRoIGQ9Ik0xMiA2MCBDMTYgNjIsIDIwIDYwLCAyMiA1NiIgc3Ryb2tlPSJ1cmwoI2l2Zi1hKSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuNSIvPgogIDwvZz4KICA8dGV4dCB4PSI2MiIgeT0iNTAiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMzQiIGxldHRlci1zcGFjaW5nPSItMS41IiBmaWxsPSJ1cmwoI2l2Zi1zKSI+CiAgICA8dHNwYW4gZm9udC13ZWlnaHQ9IjkwMCI+aW5rPC90c3Bhbj4KICAgIDx0c3BhbiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNDc1NTY5Ij52b2ljZTwvdHNwYW4+CiAgPC90ZXh0PgogIDxwYXRoIGQ9Ik02MiA1NiBDODAgNTgsIDEyMCA1NCwgMTYwIDU2IiBzdHJva2U9InVybCgjaXZmLWEpIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4K",
@@ -192,29 +213,16 @@ function getSampleContext() {
       country: "US",
       country_name: "United States",
     },
-    items: [
-      {
-        description: "Web Design",
-        quantity: 1,
-        unit: "piece",
-        formatted_unit_price: "$1,500.00",
-        tax_rate: 10,
-        formatted_line_total: "$1,500.00",
-      },
-      {
-        description: "Hosting (12 months)",
-        quantity: 12,
-        unit: "month",
-        formatted_unit_price: "$25.00",
-        tax_rate: 10,
-        formatted_line_total: "$300.00",
-      },
-    ],
+    items: sampleItems,
+    items_by_name: [...sampleItems]
+      .sort((a, b) => a.description.localeCompare(b.description))
+      .map((item, index) => ({ ...item, serial_number: index + 1 })),
     formatted_subtotal: "$1,800.00",
     has_discount: false,
     formatted_discount: "$0.00",
     tax_summary: [{ name: "VAT", rate: 10, formatted_amount: "$180.00" }],
     formatted_total: "$1,980.00",
+    amount_in_words: "One Thousand Nine Hundred Eighty Only",
     payment_terms: "Net 30",
     notes: "Thank you for your business!",
     qr: {

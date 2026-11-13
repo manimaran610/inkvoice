@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BAFL Invoice {{invoice_number}}</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:#161616; font: 12px/1.35 Arial, Helvetica, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .invoice { width:100%; min-height:277mm; border:1.5px solid #111; display:flex; flex-direction:column; }
+  .masthead { position:relative; display:flex; align-items:center; justify-content:center; min-height:88px; border-bottom:1.5px solid #111; padding:8px 10px; }
+  .logo { width:112px; height:auto; object-fit:contain; }
+  .company-title { width:100%; text-align:center; }
+  .company-title .name { width:80%; margin:0 auto; font-size:22px; font-weight:900; text-align:center; text-transform:uppercase; }
+  .company-title .address { width:60%; margin:4px auto 0; text-align:center; overflow-wrap:anywhere; }
+  .brand-logo { position:absolute; left:10px; top:50%; z-index:1; width:130px; transform:translateY(-50%); }
+  .brand-logo .logo { max-width:112px; max-height:64px; }
+  .label { font-weight:800; margin-bottom:4px; }
+  .center-row { text-align:center; padding:5px 8px; font-weight:700; border-bottom:1px solid #111; }
+  .contact-row { text-align:center; padding:5px 8px; border-bottom:1.5px solid #111; }
+  .invoice-meta { display:grid; grid-template-columns: 1.7fr 1fr; border-bottom:1.5px solid #111; }
+  .bill-to { padding:9px 10px; border-right:1px solid #111; }
+  .meta { padding:6px 10px; }
+  .meta-line { display:grid; grid-template-columns: 115px 1fr; padding:3px 0; border-bottom:1px solid #ddd; }
+  .meta-line:last-child { border-bottom:0; }
+  .meta-key { font-weight:700; }
+  table.items { width:100%; flex:1; border-collapse:collapse; table-layout:fixed; }
+  .items th, .items td { border-right:1px solid #111; border-bottom:1px solid #111; padding:6px 6px; overflow-wrap:anywhere; }
+  .items th:last-child, .items td:last-child { border-right:0; }
+  .items thead th { font-size:13px; text-align:center; font-weight:800; }
+  .items td { font-size:12px; }
+  .items .center { text-align:center; }
+  .items tbody { counter-reset: item-row; }
+  .items tbody tr { counter-increment: item-row; }
+  .items tbody tr.empty-row { height:100%; }
+  .items tbody tr.empty-row td {
+    height:100%;
+    padding:0;
+    border-bottom:0;
+    background:none;
+  }
+  .items td.serial::before { content: counter(item-row); }
+  .items .right { text-align:right; }
+  .items .sn { width:8%; } .items .desc { width:39%; }
+  .items .qty { width:9%; } .items .unit { width:10%; } .items .rate { width:16%; } .items .gross { width:18%; }
+  .items tfoot td { border-top:1.5px solid #111; border-bottom:1.5px solid #111; padding:8px 6px; font-size:13px; font-weight:800; }
+  .items tfoot td:first-child { border-right:0; }
+  .items tfoot .summary-label { border-right:1px solid #111; }
+  .items tfoot .summary-value { text-align:right; }
+  .amount-in-words { padding:6px 10px; border-bottom:1.5px solid #111; }
+  .signatures { display:grid; grid-template-columns:1fr 1fr; min-height:72px; border-bottom:1px solid #111; }
+  .sign { padding:8px 10px; position:relative; }
+  .sign + .sign { border-left:1px solid #111; }
+  .authorized { position:absolute; right:10px; bottom:8px; }
+  .footer { text-align:center; font-weight:700; font-style:italic; padding:8px 6px; }
+  .muted { color:#333; }
+  @media print { .items tr { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <header class="masthead">
+    <div class="brand-logo">
+      {{#company.logo}}
+      <img class="logo" src="{{company.logo}}" alt="">
+      {{/company.logo}}
+    </div>
+    <div class="company-title">
+      <div class="name">{{company.name}}</div>
+      <div class="address">{{{company.address}}}</div>
+      {{#company.phone}}<div>Phone: {{company.phone}}</div>{{/company.phone}}
+    </div>
+  </header>
+
+  <div class="center-row">
+    <strong>FSSAI:</strong> 12422002004483 &nbsp;&nbsp;
+    <strong>MSME No.:</strong> UDYAM-TN-02-0117573
+  </div>
+
+  <section class="invoice-meta">
+    <div class="bill-to">
+      <div class="label">BILL TO: {{customer.name}}</div>
+      {{#customer.address_line1}}<div>{{customer.address_line1}}</div>{{/customer.address_line1}}
+      {{#customer.address_line2}}<div>{{customer.address_line2}}</div>{{/customer.address_line2}}
+      <div>{{customer.city}} {{customer.state}} {{customer.postal_code}}</div>
+      {{#customer.country_name}}<div>{{customer.country_name}}</div>{{/customer.country_name}}
+      {{#customer.phone}}<div>Phone: {{customer.phone}}</div>{{/customer.phone}}
+      {{#customer.email}}<div>Email: {{customer.email}}</div>{{/customer.email}}
+    </div>
+    <div class="meta">
+      <div class="meta-line"><span class="meta-key">Invoice Number</span><span>{{invoice_number}}</span></div>
+      <div class="meta-line"><span class="meta-key">Date</span><span>{{issue_date}}</span></div>
+      {{#purchase_order}}<div class="meta-line"><span class="meta-key">PO Number</span><span>{{purchase_order}}</span></div>{{/purchase_order}}
+      {{#due_date}}<div class="meta-line"><span class="meta-key">Due Date</span><span>{{due_date}}</span></div>{{/due_date}}
+      {{#payment_terms}}<div class="meta-line"></div>{{/payment_terms}}
+    </div>
+  </section>
+
+  <table class="items">
+    <thead><tr>
+      <th class="sn">S.No</th><th class="desc">Description</th>
+      <th class="qty">Qty</th><th class="unit">Units</th><th class="rate">Rate ({{currency}})</th><th class="gross">Gross ({{currency}})</th>
+    </tr></thead>
+    <tbody>
+      {{#items_by_name}}
+      <tr>
+        <td class="center serial"></td>
+        <td>{{description}}</td>
+        <td class="center">{{quantity}}</td>
+        <td class="center">{{unit}}</td>
+        <td class="right">{{formatted_unit_price}}</td>
+        <td class="right">{{formatted_line_total}}</td>
+      </tr>
+      {{/items_by_name}}
+      <tr class="empty-row">
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>
+    </tbody>
+    <tfoot><tr>
+      <td colspan="4"></td>
+      <td class="summary-label">Total ({{currency}})</td>
+      <td class="summary-value">{{formatted_total}}</td>
+    </tr></tfoot>
+  </table>
+  <div class="amount-in-words"><strong>Amount in words ({{currency}}):</strong> {{amount_in_words}}</div>
+
+
+  <footer class="footer">Thanks for your business, We value your relationship above everything!</footer>
+</div>
+
+
+
+</body>
+</html>

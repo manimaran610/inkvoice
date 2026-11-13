@@ -151,6 +151,7 @@ export default function Invoices() {
   const invoiceColumns = [
     { key: "invoice_number", label: t("invoices.invoice_number"), required: true },
     { key: "customer_name", label: t("invoices.customer") },
+    { key: "purchase_order", label: t("invoices.po_number") },
     { key: "issue_date", label: t("invoices.issue_date") },
     { key: "due_date", label: t("invoices.due_date") },
     { key: "total", label: t("common.total") },
@@ -524,6 +525,15 @@ export default function Invoices() {
                   onSort={handleSort}
                 />
               )}
+              {isColVisible("purchase_order") && (
+                <SortableColumnHeader
+                  label={t("invoices.po_number")}
+                  sortKey="purchase_order"
+                  currentSort={sort}
+                  onSort={handleSort}
+                  className="w-24 max-w-24"
+                />
+              )}
               {isColVisible("issue_date") && (
                 <SortableColumnHeader
                   label={t("invoices.issue_date")}
@@ -653,6 +663,14 @@ export default function Invoices() {
                     </TableCell>
                   )}
                   {isColVisible("customer_name") && <TableCell>{inv.customer_name}</TableCell>}
+                  {isColVisible("purchase_order") && (
+                    <TableCell
+                      className="w-24 max-w-24 truncate"
+                      title={inv.purchase_order || undefined}
+                    >
+                      {inv.purchase_order || "-"}
+                    </TableCell>
+                  )}
                   {isColVisible("issue_date") && (
                     <TableCell className="text-muted-foreground">
                       {formatDate(inv.issue_date)}

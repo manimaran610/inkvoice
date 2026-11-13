@@ -61,6 +61,7 @@ interface CreateInvoiceData {
   reference_invoice_id?: string | null;
   notes?: string | null;
   payment_terms?: string | null;
+  purchase_order?: string | null;
   currency?: string;
   exchange_rate?: number;
   discount_type?: string | null;
@@ -115,10 +116,10 @@ function buildInvoiceFilters(params: InvoiceFilterParams): {
     queryParams.push(params.to);
   }
   if (params.search) {
-    // Match the customer name too, so searching "Acme" surfaces Acme's
-    // invoices. Queries using this filter must LEFT JOIN customers c.
-    conditions.push("(i.invoice_number LIKE ? OR c.name LIKE ?)");
-    queryParams.push(`%${params.search}%`, `%${params.search}%`);
+    // Match customer names and PO numbers alongside invoice numbers.
+    // Queries using this filter must LEFT JOIN customers c.
+    conditions.push("(i.invoice_number LIKE ? OR c.name LIKE ? OR i.purchase_order LIKE ?)");
+    queryParams.push(`%${params.search}%`, `%${params.search}%`, `%${params.search}%`);
   }
   if (params.updated_since) {
     conditions.push("i.updated_at >= ?");
@@ -318,8 +319,8 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
       `INSERT INTO invoices (id, invoice_number, customer_id, status, type, reference_invoice_id,
        issue_date, due_date, subtotal, tax_total, discount_type, discount_value, discount_amount,
        cash_discount_type, cash_discount_value, cash_discount_days,
-       total, notes, payment_terms, currency, exchange_rate, locale, use_tamil_product_names, template_id)
-       VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       total, notes, payment_terms, purchase_order, currency, exchange_rate, locale, use_tamil_product_names, template_id)
+       VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         invoiceId,
         invoiceNumber,
@@ -339,6 +340,7 @@ export function createInvoice(data: CreateInvoiceData): InvoiceWithItems {
         totals.total,
         data.notes || null,
         data.payment_terms || null,
+        data.purchase_order || null,
         data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
@@ -397,7 +399,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
   const db = getDb();
   const existing = db
     .query(
-      "SELECT id, cash_discount_type, cash_discount_value, cash_discount_days, use_tamil_product_names FROM invoices WHERE id = ?",
+      "SELECT id, cash_discount_type, cash_discount_value, cash_discount_days, use_tamil_product_names, purchase_order FROM invoices WHERE id = ?",
     )
     .get(id) as {
     id: string;
@@ -405,6 +407,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
     cash_discount_value: number;
     cash_discount_days: number;
     use_tamil_product_names: number;
+    purchase_order: string | null;
   } | null;
   if (!existing) return null;
 
@@ -423,6 +426,8 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
     data.cash_discount_days === undefined
       ? existing.cash_discount_days
       : (data.cash_discount_days ?? 0);
+  const purchaseOrder =
+    data.purchase_order === undefined ? existing.purchase_order : data.purchase_order || null;
 
   // Wrap in transaction for atomicity
   db.transaction(() => {
@@ -438,7 +443,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
        subtotal = ?, tax_total = ?, discount_type = ?, discount_value = ?,
        discount_amount = ?, cash_discount_type = ?, cash_discount_value = ?,
        cash_discount_days = ?, total = ?, notes = ?, payment_terms = ?,
-       currency = ?, exchange_rate = ?, locale = ?, use_tamil_product_names = ?, template_id = ?, updated_at = datetime('now') WHERE id = ?`,
+       purchase_order = ?, currency = ?, exchange_rate = ?, locale = ?, use_tamil_product_names = ?, template_id = ?, updated_at = datetime('now') WHERE id = ?`,
       [
         data.customer_id,
         data.issue_date,
@@ -454,6 +459,7 @@ export function updateInvoice(id: string, data: CreateInvoiceData): InvoiceWithI
         totals.total,
         data.notes || null,
         data.payment_terms || null,
+        purchaseOrder,
         data.currency || "INR",
         resolveExchangeRate(data.currency, data.exchange_rate),
         data.locale || null,
@@ -767,6 +773,7 @@ export function duplicateInvoice(id: string): InvoiceWithItems | null {
     due_date: existing.due_date,
     notes: existing.notes,
     payment_terms: existing.payment_terms,
+    purchase_order: existing.purchase_order,
     currency: existing.currency,
     locale: existing.locale,
     use_tamil_product_names: !!existing.use_tamil_product_names,

@@ -111,6 +111,21 @@ describe("tag service", () => {
 });
 
 describe("tags on invoices", () => {
+  test("invoice list search matches purchase order numbers", async () => {
+    const customer = makeCustomer("PoSearchCustomer");
+    const invoice = createInvoice({
+      customer_id: customer.id,
+      issue_date: "2026-01-01",
+      purchase_order: "PO-SEARCH-4821",
+      items: [{ description: "Work", quantity: 1, unit_price: 100 }],
+    });
+
+    const res = await authed("/api/v1/invoices?search=SEARCH-4821");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.data.items.map((item: { id: string }) => item.id)).toContain(invoice.id);
+  });
+
   test("createInvoice and getInvoice expose tags", () => {
     const c = makeCustomer("InvCust");
     const inv = makeInvoice(c.id, ["Urgent", "web"]);

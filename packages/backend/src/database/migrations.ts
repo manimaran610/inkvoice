@@ -1172,6 +1172,13 @@ const MIGRATIONS: Migration[] = [
       addCustomerProductDefaultUnits(db);
     },
   },
+  {
+    version: 38,
+    name: "invoice_purchase_order",
+    up: (db) => {
+      addColumnIfMissing(db, "invoices", "purchase_order", "TEXT");
+    },
+  },
 ];
 
 export const LATEST_MIGRATION_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

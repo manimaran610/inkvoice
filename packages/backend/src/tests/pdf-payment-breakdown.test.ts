@@ -4,10 +4,11 @@ import { closeDatabase, getDb, initDatabase } from "../database/connection";
 import { runMigrations } from "../database/migrations";
 import { seed } from "../database/seed";
 import { createCustomer } from "../services/customer.service";
-import { createInvoice, markSent } from "../services/invoice.service";
+import { createInvoice, markSent, updateInvoice } from "../services/invoice.service";
 import { recordPayment } from "../services/payment.service";
-import { buildInvoiceContext, renderInvoiceHtml } from "../services/pdf.service";
+import { buildInvoiceContext, buildQuoteContext, renderInvoiceHtml } from "../services/pdf.service";
 import { createProduct } from "../services/product.service";
+import { createQuote } from "../services/quote.service";
 import { resetEnvCache } from "../utils/env";
 
 const TEST_DB = "./data/test-pdf-payment-breakdown.db";
@@ -92,6 +93,76 @@ describe("PDF payment breakdown", () => {
     expect(ctx.payments[0].formatted_amount).toContain("50");
     expect(ctx.formatted_amount_paid).toContain("80");
     expect(ctx.formatted_balance_due).toContain("20");
+  });
+
+  test("purchase order persists and amount in words is available to invoice templates", () => {
+    const customer = createCustomer({ name: "Purchase order customer" });
+    const invoice = createInvoice({
+      customer_id: customer.id,
+      issue_date: "2026-02-01",
+      purchase_order: "PO-123",
+      items: [{ description: "Work", quantity: 1, unit_price: 1234.56 }],
+    });
+
+    expect(invoice.purchase_order).toBe("PO-123");
+    const context = buildInvoiceContext(invoice.id)!;
+    expect(context.purchase_order).toBe("PO-123");
+    expect(context.amount_in_words).toBe(
+      "One Thousand Two Hundred Thirty-Four and Fifty-Six/100 Only",
+    );
+
+    updateInvoice(invoice.id, {
+      customer_id: customer.id,
+      issue_date: invoice.issue_date,
+      items: [{ description: "Work", quantity: 1, unit_price: 1234.56 }],
+    });
+    expect(buildInvoiceContext(invoice.id)?.purchase_order).toBe("PO-123");
+
+    updateInvoice(invoice.id, {
+      customer_id: customer.id,
+      issue_date: invoice.issue_date,
+      purchase_order: "PO-456",
+      items: [{ description: "Work", quantity: 1, unit_price: 1234.56 }],
+    });
+    expect(buildInvoiceContext(invoice.id)?.purchase_order).toBe("PO-456");
+  });
+
+  test("provides alphabetically sorted, numbered line items without changing invoice order", () => {
+    const customer = createCustomer({ name: "Sorted line item customer" });
+    const invoice = createInvoice({
+      customer_id: customer.id,
+      issue_date: "2026-02-01",
+      items: [
+        { description: "Zulu", quantity: 1, unit_price: 10, sort_order: 0 },
+        { description: "Alpha", quantity: 1, unit_price: 10, sort_order: 1 },
+        { description: "Beta", quantity: 1, unit_price: 10, sort_order: 2 },
+      ],
+    });
+
+    const context = buildInvoiceContext(invoice.id)!;
+    expect(context.items.map((item) => item.description)).toEqual(["Zulu", "Alpha", "Beta"]);
+    expect(context.items_by_name.map((item) => [item.description, item.serial_number])).toEqual([
+      ["Alpha", 1],
+      ["Beta", 2],
+      ["Zulu", 3],
+    ]);
+  });
+
+  test("provides sorted and numbered line items for quote templates too", () => {
+    const customer = createCustomer({ name: "Sorted quote customer" });
+    const quote = createQuote({
+      customer_id: customer.id,
+      issue_date: "2026-02-01",
+      items: [
+        { description: "Zulu", quantity: 1, unit_price: 10, sort_order: 0 },
+        { description: "Alpha", quantity: 1, unit_price: 10, sort_order: 1 },
+      ],
+    });
+
+    expect(buildQuoteContext(quote.id)?.items_by_name.map((item) => item.description)).toEqual([
+      "Alpha",
+      "Zulu",
+    ]);
   });
 
   test("default template renders the payments section only when payments exist", () => {

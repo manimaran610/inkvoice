@@ -301,6 +301,7 @@ const TEMPLATE_VARIABLES = [
     group: "Document",
     vars: [
       { tag: "invoice_number", desc: "Invoice/quote number" },
+      { tag: "purchase_order", desc: "Purchase order number (invoice only)" },
       { tag: "issue_date", desc: "Formatted issue date" },
       { tag: "due_date", desc: "Formatted due date" },
       { tag: "status", desc: "Document status (draft, sent, paid, etc.)" },
@@ -340,6 +341,8 @@ const TEMPLATE_VARIABLES = [
     group: "Line Items",
     section: true,
     vars: [
+      { tag: "items_by_name", desc: "Document line items sorted by name (SKV template)" },
+      { tag: "serial_number", desc: "Line item number (inside items_by_name)" },
       { tag: "description", desc: "Item description" },
       { tag: "quantity", desc: "Quantity" },
       { tag: "unit", desc: "Unit (piece, hour, kg, etc.)" },
@@ -357,6 +360,7 @@ const TEMPLATE_VARIABLES = [
       { tag: "has_discount", desc: "Boolean — true when discount > 0" },
       { tag: "formatted_discount", desc: "Formatted discount amount" },
       { tag: "formatted_total", desc: "Formatted grand total" },
+      { tag: "amount_in_words", desc: "Grand total written in words" },
     ],
   },
   {

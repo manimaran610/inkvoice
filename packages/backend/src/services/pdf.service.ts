@@ -1,6 +1,7 @@
 import Mustache from "mustache";
 import { getDb } from "../database/connection";
 import type { Customer } from "../types/customer";
+import { amountToWords } from "../utils/amount-to-words";
 import { cashDiscountDeadline, cashDiscountOn, hasCashDiscount } from "../utils/cash-discount";
 import { formatCurrency } from "../utils/currency";
 import { buildEpcPayload } from "../utils/epc-qr";
@@ -173,6 +174,23 @@ export function buildInvoiceContext(invoiceId: string) {
   }
   const itemDescription = (item: (typeof invoiceItems)[number]) =>
     (item.product_id && tamilProductNames.get(item.product_id)) || item.description;
+  const formatInvoiceItem = (item: (typeof invoice.items)[number]) => ({
+    description: itemDescription(item),
+    quantity: item.quantity,
+    unit: item.unit,
+    unit_price: item.unit_price,
+    formatted_unit_price: formatCurrency(item.unit_price, currency, numberFormat, localeOverride),
+    tax_rate: item.tax_rate,
+    line_total: item.line_total,
+    formatted_line_total: formatCurrency(item.line_total, currency, numberFormat, localeOverride),
+  });
+  const formatItemsByName = (items: typeof invoice.items, firstSerialNumber = 1) =>
+    [...items]
+      .sort((a, b) => itemDescription(a).localeCompare(itemDescription(b), locale))
+      .map((item, index) => ({
+        ...formatInvoiceItem(item),
+        serial_number: firstSerialNumber + index,
+      }));
 
   const payments = listPayments(invoiceId);
   const amountPaid = invoice.amount_paid || 0;
@@ -181,6 +199,7 @@ export function buildInvoiceContext(invoiceId: string) {
 
   return {
     invoice_number: invoice.invoice_number,
+    purchase_order: invoice.purchase_order,
     issue_date: formatDateStr(invoice.issue_date, dateFormat, localeOverride),
     due_date: invoice.due_date ? formatDateStr(invoice.due_date, dateFormat, localeOverride) : null,
     status: invoice.status,
@@ -215,50 +234,30 @@ export function buildInvoiceContext(invoiceId: string) {
           tax_id: customer.tax_id,
         }
       : {},
-    items: invoice.items.map((item) => ({
-      description: itemDescription(item),
-      quantity: item.quantity,
-      unit: item.unit,
-      unit_price: item.unit_price,
-      formatted_unit_price: formatCurrency(item.unit_price, currency, numberFormat, localeOverride),
-      tax_rate: item.tax_rate,
-      line_total: item.line_total,
-      formatted_line_total: formatCurrency(item.line_total, currency, numberFormat, localeOverride),
-    })),
+    items: invoice.items.map(formatInvoiceItem),
+    items_by_name: formatItemsByName(invoice.items),
     consolidated: invoice.consolidation
       ? {
           name: invoice.consolidation.name,
-          sources: invoice.consolidation.sources.map((source) => ({
-            invoice_number: source.invoice_number,
-            issue_date: formatDateStr(source.issue_date, dateFormat, localeOverride),
-            items: source.items.map((item) => ({
-              description: itemDescription(item),
-              quantity: item.quantity,
-              unit: item.unit,
-              unit_price: item.unit_price,
-              formatted_unit_price: formatCurrency(
-                item.unit_price,
-                currency,
-                numberFormat,
-                localeOverride,
-              ),
-              tax_rate: item.tax_rate,
-              line_total: item.line_total,
-              formatted_line_total: formatCurrency(
-                item.line_total,
-                currency,
-                numberFormat,
-                localeOverride,
-              ),
-            })),
-            subtotal: source.subtotal,
-            formatted_subtotal: formatCurrency(
-              source.subtotal,
-              currency,
-              numberFormat,
-              localeOverride,
-            ),
-          })),
+          sources: (() => {
+            let nextSerialNumber = 1;
+            return invoice.consolidation.sources.map((source) => {
+              const items = formatItemsByName(source.items, nextSerialNumber);
+              nextSerialNumber += source.items.length;
+              return {
+                invoice_number: source.invoice_number,
+                issue_date: formatDateStr(source.issue_date, dateFormat, localeOverride),
+                items,
+                subtotal: source.subtotal,
+                formatted_subtotal: formatCurrency(
+                  source.subtotal,
+                  currency,
+                  numberFormat,
+                  localeOverride,
+                ),
+              };
+            });
+          })(),
         }
       : null,
     formatted_subtotal: formatCurrency(invoice.subtotal, currency, numberFormat, localeOverride),
@@ -275,6 +274,7 @@ export function buildInvoiceContext(invoiceId: string) {
       formatted_amount: formatCurrency(t.amount, currency, numberFormat, localeOverride),
     })),
     formatted_total: formatCurrency(invoice.total, currency, numberFormat, localeOverride),
+    amount_in_words: amountToWords(invoice.total),
     has_payments: amountPaid > 0,
     formatted_amount_paid: formatCurrency(amountPaid, currency, numberFormat, localeOverride),
     formatted_balance_due: formatCurrency(balanceDue, currency, numberFormat, localeOverride),
@@ -394,10 +394,24 @@ export function buildQuoteContext(quoteId: string) {
   const currency = quote.currency || settings.currency || "INR";
   const dateFormat = settings.date_format || undefined;
   const numberFormat = settings.number_format || undefined;
+  const itemsByName = [...quote.items]
+    .sort((a, b) => a.description.localeCompare(b.description, locale))
+    .map((item, index) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.unit_price,
+      formatted_unit_price: formatCurrency(item.unit_price, currency, numberFormat, localeOverride),
+      tax_rate: item.tax_rate,
+      line_total: item.line_total,
+      formatted_line_total: formatCurrency(item.line_total, currency, numberFormat, localeOverride),
+      serial_number: index + 1,
+    }));
 
   return {
     // Use invoice_number so existing templates work for quotes too
     invoice_number: quote.quote_number,
+    purchase_order: null,
     issue_date: formatDateStr(quote.issue_date, dateFormat, localeOverride),
     due_date: quote.valid_until
       ? formatDateStr(quote.valid_until, dateFormat, localeOverride)
@@ -441,6 +455,7 @@ export function buildQuoteContext(quoteId: string) {
       line_total: item.line_total,
       formatted_line_total: formatCurrency(item.line_total, currency, numberFormat, localeOverride),
     })),
+    items_by_name: itemsByName,
     formatted_subtotal: formatCurrency(quote.subtotal, currency, numberFormat, localeOverride),
     has_discount: quote.discount_amount > 0,
     formatted_discount: formatCurrency(
@@ -455,6 +470,7 @@ export function buildQuoteContext(quoteId: string) {
       formatted_amount: formatCurrency(t.amount, currency, numberFormat, localeOverride),
     })),
     formatted_total: formatCurrency(quote.total, currency, numberFormat, localeOverride),
+    amount_in_words: amountToWords(quote.total),
     notes: quote.notes,
     currency,
   };
