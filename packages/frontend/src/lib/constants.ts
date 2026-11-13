@@ -1,4 +1,4 @@
-export const PRODUCT_UNITS = ["kg", "nos", "box"] as const;
+export const PRODUCT_UNITS = ["kg", "nos", "box", "bag"] as const;
 
 export const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
