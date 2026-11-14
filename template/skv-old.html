@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice {{invoice_number}}</title>
+<style>
+  /* The Mustache renderer builds one 30-row table for each printed page. */
+  @page { size: A4 portrait; margin: 8mm; }
+  * { box-sizing: border-box; }
+  :root { --grid:#cfcfcf; }
+  html { width:194mm; max-width:100%; margin:0 auto; }
+  body { margin:0; color:#111; font: 12px/1.4 Arial, Helvetica, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  table.invoice { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .invoice-page { break-after:page; page-break-after:always; }
+  .invoice-page:last-child { break-after:auto; page-break-after:auto; }
+  thead { display:table-header-group; }          /* repeats on every page */
+  tbody.foot { display:table-row-group; }        /* total + words only once, at the very end */
+
+  .title-cell { border:0 !important; text-align:center; font-size:12px; line-height:1.2; letter-spacing:1px; padding:0 0 2px; font-weight:400; }
+  .hd { padding:0 !important; border-left:1.5px solid #111; border-right:1.5px solid #111; border-top:1.5px solid #111; font-weight:400; text-align:left; }
+
+  /* Row 1: company (left) + bill no / date / PO (right) */
+  .top { display:grid; grid-template-columns:62% 38%; border-bottom:1.5px solid #111; }
+  .company { padding:4px 10px; }
+  .company .name { font-size:22px; font-weight:800; text-transform:uppercase; line-height:1.1; margin-bottom:3px; }
+  .company .address { font-family:"Times New Roman", Times, serif; font-size:13px; line-height:1.3; }
+  .company .phone-line { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; line-height:1.3; font-family:"Times New Roman", Times, serif; font-size:13px; }
+  .company .phone-line .cell { font-family:Arial, Helvetica, sans-serif; font-size:11px; }
+  .company .email { margin-top:6px; font-size:12px; }
+  .invoice-meta { border-left:1px solid #111; padding:6px 14px; display:flex; flex-direction:column; justify-content:space-around; }
+  .meta-line { display:grid; grid-template-columns:70px 20px 1fr; font-size:12px; }
+  .meta-line .colon { text-align:center; }
+
+  /* Row 2: party (left) + FSSAI / MSME (right) */
+  .party-row { display:grid; grid-template-columns:62% 38%; border-bottom:1.5px solid #111; }
+  .party { padding:4px 10px; font-size:12.5px; line-height:1.3; }
+  .party .label { font-size:12px; text-decoration:underline; }
+  .party .gstin-line { display:flex; gap:80px; }
+  .party .gstin-line .k { font-size:11px; }
+  .regs { border-left:1px solid #111; padding:6px 14px; font-weight:700; font-size:12.5px; display:flex; flex-direction:column; justify-content:space-around; }
+
+  /* Column headings */
+  th.col { font-weight:400; font-size:13px; text-align:center; padding:4px 6px; border-bottom:1px solid #111; border-right:1px solid var(--grid); }
+  th.col:first-child { border-left:1.5px solid #111; }
+  th.col:last-child { border-right:1.5px solid #111; }
+  th.col.desc { text-align:left; }
+
+  /* Item rows: each Mustache page contains exactly 30 rows. */
+  tbody.rows td { height:22px; padding:0 8px; border-left:1px solid var(--grid); border-right:1px solid var(--grid); font-family:"Times New Roman", Times, serif; font-size:14px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  tbody.rows tr.item td { border-bottom:1px solid var(--grid); }
+  tbody.rows td:first-child { border-left:1.5px solid #111; }
+  tbody.rows td:last-child { border-right:1.5px solid #111; }
+  tbody.rows td.center { text-align:center; }
+  tbody.rows td.right { text-align:right; }
+  /* Blank rows retain the column guides but have no horizontal borders. */
+  tbody.rows tr.pad td { border-top:0; border-bottom:0; }
+  tbody.rows tr.pad td:first-child { border-left:1.5px solid #111; }
+  tbody.rows tr.pad td:last-child { border-right:1.5px solid #111; }
+  tr { break-inside:avoid; }
+
+  /* Total + amount in words (last page only) */
+  tbody.foot td { border-left:1.5px solid #111; border-right:1.5px solid #111; }
+  .total-label { border-top:1.5px solid #111; border-bottom:1.5px solid #111; border-right:0 !important; text-align:right; font-family:"Times New Roman", Times, serif; font-size:12px; font-weight:800; padding:8px 14px; }
+  .total-value { border-top:1.5px solid #111; border-bottom:1.5px solid #111; border-left:0 !important; text-align:right; font-size:13px; font-weight:800; padding:8px 14px; }
+  .words { border-bottom:1.5px solid #111; padding:6px 10px !important; height:60px; vertical-align:top; }
+  .words .label { font-size:12px; }
+  .words .row { display:flex; justify-content:space-between; gap:20px; padding:2px 0 0 26px; }
+  .words .for { white-space:nowrap; padding-right:20px; }
+  .thanks { border-bottom:1.5px solid #111; text-align:center; font-style:italic; font-weight:700; padding:7px 6px; }
+</style>
+</head>
+<body>
+{{#items_by_page}}
+<div class="invoice-page">
+<table class="invoice">
+  <colgroup>
+    <col style="width:7.7%"><col style="width:45%"><col style="width:8%">
+    <col style="width:10.8%"><col style="width:13.7%"><col style="width:14.8%">
+  </colgroup>
+
+  <thead>
+    <tr><th colspan="6" class="title-cell">INVOICE</th></tr>
+    <tr><th colspan="6" class="hd">
+      <section class="top">
+        <div class="company">
+          <div class="name">{{company.name}}</div>
+          <div class="address">{{{company.address}}}</div>
+          <div class="phone-line">{{#company.phone}}<span><span class="cell">Cell : </span>{{company.phone}}</span>{{/company.phone}}{{#company.email}}<span>EMail : {{company.email}}</span>{{/company.email}}</div>
+        </div>
+        <div class="invoice-meta">
+          <div class="meta-line"><span>Bill No</span><span class="colon">:</span><span>{{invoice_number}}</span></div>
+          <div class="meta-line"><span>Date</span><span class="colon">:</span><span>{{issue_date}}</span></div>
+          {{#purchase_order}}<div class="meta-line"><span>PO No</span><span class="colon">:</span><span>{{purchase_order}}</span></div>{{/purchase_order}}
+          {{^purchase_order}}{{#po_number}}<div class="meta-line"><span>PO No</span><span class="colon">:</span><span>{{po_number}}</span></div>{{/po_number}}{{/purchase_order}}
+        </div>
+      </section>
+      <section class="party-row">
+        <div class="party">
+          <div class="label">Party Name &amp; Address</div>
+          <div>{{customer.name}}</div>
+          {{#customer.address_line1}}<div>{{customer.address_line1}}</div>{{/customer.address_line1}}
+          {{#customer.address_line2}}<div>{{customer.address_line2}}</div>{{/customer.address_line2}}
+          <div class="gstin-line">
+            <span>{{customer.city}}{{#customer.state}} {{customer.state}}{{/customer.state}}{{#customer.postal_code}}-{{customer.postal_code}}{{/customer.postal_code}}</span>
+          </div>
+          {{#customer.country_name}}<div>{{customer.country_name}}</div>{{/customer.country_name}}
+          <div class="gstin-line"><span>Cell : {{customer.phone}}</span><span><span class="k">GSTIN : </span>{{customer.tax_id}}</span></div>
+        </div>
+        <div class="regs">
+          <div>FSSAI : 12422002004483</div>
+          <div>MSMENO : UDYAM-TN-02-0117573</div>
+        </div>
+      </section>
+    </th></tr>
+    <tr>
+      <th class="col">S.No</th><th class="col desc">Particulars</th><th class="col">Unit</th>
+      <th class="col">Qnty</th><th class="col">Rate</th><th class="col">Amount</th>
+    </tr>
+  </thead>
+
+  <tbody class="rows">
+    {{#rows}}
+    {{#is_pad}}
+    <tr class="pad"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    {{/is_pad}}
+    {{^is_pad}}
+    <tr class="item">
+      <td class="center serial">{{serial_number}}</td>
+      <td>{{description}}{{^description}}{{name}}{{/description}}</td>
+      <td class="center">{{unit}}</td>
+      <td class="center">{{quantity}}</td>
+      <td class="right">{{formatted_unit_price}}{{^formatted_unit_price}}{{unit_price}}{{/formatted_unit_price}}</td>
+      <td class="right">{{formatted_line_total}}{{^formatted_line_total}}{{line_total}}{{/formatted_line_total}}</td>
+    </tr>
+    {{/is_pad}}
+    {{/rows}}
+  </tbody>
+
+  {{#is_last_page}}
+  <tbody class="foot">
+    <tr>
+      <td colspan="5" class="total-label">TOTAL :</td>
+      <td class="total-value">{{formatted_total}}</td>
+    </tr>
+    <tr>
+      <td colspan="6" class="words">
+        <div class="label">Amt Words :</div>
+        <div class="row">
+          <span>{{amount_in_words}}</span>
+          <span class="for">For &nbsp;{{company.name}}</span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="6" class="thanks">Thanks for your business, We value your relationship above everything!</td>
+    </tr>
+  </tbody>
+  {{/is_last_page}}
+</table>
+{{/items_by_page}}
+</body>
+</html>

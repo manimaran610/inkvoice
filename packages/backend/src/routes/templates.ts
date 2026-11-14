@@ -4,6 +4,7 @@ import { requirePermission } from "../middleware/auth";
 import * as templateService from "../services/template.service";
 import { buildEpcPayload } from "../utils/epc-qr";
 import { qrToDataUri } from "../utils/qr-code";
+import { paginateTemplateItems } from "../utils/template-pagination";
 
 const templates = new Hono();
 
@@ -146,9 +147,17 @@ templates.post("/:id/preview", requirePermission("templates", "read"), async (c)
 
   const body = await c.req.json().catch(() => ({}));
   const context = body.context || getSampleContext();
+  const items = Array.isArray(context.items_by_name)
+    ? context.items_by_name
+    : Array.isArray(context.items)
+      ? context.items
+      : [];
+  const renderContext = context.items_by_page
+    ? context
+    : { ...context, items_by_page: paginateTemplateItems(items) };
   const htmlContent = body.html_content ?? template.html_content;
   const cssContent = body.css_content ?? (template.css_content || "");
-  const html = templateService.renderTemplate(htmlContent, context);
+  const html = templateService.renderTemplate(htmlContent, renderContext);
   const fullHtml = cssContent ? `<style>${cssContent}</style>${html}` : html;
   c.header(
     "Content-Security-Policy",
@@ -187,6 +196,9 @@ function getSampleContext() {
       formatted_line_total: "$300.00",
     },
   ];
+  const itemsByName = [...sampleItems]
+    .sort((a, b) => a.description.localeCompare(b.description))
+    .map((item, index) => ({ ...item, serial_number: index + 1 }));
 
   return {
     invoice_number: "INV-2026-0001",
@@ -214,9 +226,8 @@ function getSampleContext() {
       country_name: "United States",
     },
     items: sampleItems,
-    items_by_name: [...sampleItems]
-      .sort((a, b) => a.description.localeCompare(b.description))
-      .map((item, index) => ({ ...item, serial_number: index + 1 })),
+    items_by_name: itemsByName,
+    items_by_page: paginateTemplateItems(itemsByName),
     formatted_subtotal: "$1,800.00",
     has_discount: false,
     formatted_discount: "$0.00",

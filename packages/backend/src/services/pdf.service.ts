@@ -7,6 +7,7 @@ import { formatCurrency } from "../utils/currency";
 import { buildEpcPayload } from "../utils/epc-qr";
 import { escapeMultiline } from "../utils/html";
 import { qrToDataUri } from "../utils/qr-code";
+import { paginateTemplateItems } from "../utils/template-pagination";
 import { getInvoice } from "./invoice.service";
 import { listPayments } from "./payment.service";
 import { getQuote } from "./quote.service";
@@ -196,6 +197,7 @@ export function buildInvoiceContext(invoiceId: string) {
   const amountPaid = invoice.amount_paid || 0;
   const cashDiscountApplied = invoice.cash_discount_applied || 0;
   const balanceDue = Math.max(0, invoice.total - amountPaid - cashDiscountApplied);
+  const itemsByName = formatItemsByName(invoice.items);
 
   return {
     invoice_number: invoice.invoice_number,
@@ -235,7 +237,8 @@ export function buildInvoiceContext(invoiceId: string) {
         }
       : {},
     items: invoice.items.map(formatInvoiceItem),
-    items_by_name: formatItemsByName(invoice.items),
+    items_by_name: itemsByName,
+    items_by_page: paginateTemplateItems(itemsByName),
     consolidated: invoice.consolidation
       ? {
           name: invoice.consolidation.name,
