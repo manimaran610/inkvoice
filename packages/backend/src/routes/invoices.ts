@@ -17,6 +17,7 @@ import { dispatchEvent } from "../services/outgoing-webhooks.service";
 import * as paymentService from "../services/payment.service";
 import * as quoteService from "../services/quote.service";
 import { getReminderLog } from "../services/reminder.service";
+import { getAllSettings } from "../services/settings.service";
 import { getTagsForItem, setItemTags } from "../services/tag.service";
 import type { Invoice } from "../types/invoice";
 import { buildCsv, type CsvColumn, csvHeaders } from "../utils/csv";
@@ -25,6 +26,20 @@ import { buildXmlInvoiceData } from "../xml/build-data";
 import { getProfile, listProfiles } from "../xml/profile-registry";
 
 const invoices = new Hono();
+
+invoices.get("/report/company-profile", requirePermission("invoices", "read"), (c) => {
+  const settings = getAllSettings();
+  return c.json({
+    success: true,
+    data: {
+      company_name: settings.company_name,
+      company_address: settings.company_address,
+      company_email: settings.company_email,
+      company_phone: settings.company_phone,
+      company_logo: settings.company_logo,
+    },
+  });
+});
 
 invoices.get("/", requirePermission("invoices", "read"), (c) => {
   const status = c.req.query("status");

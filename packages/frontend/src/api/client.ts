@@ -938,6 +938,18 @@ export const api = {
     }),
 
   // Invoice preview & PDF
+  getInvoiceReportCompanyProfile: () =>
+    request<{
+      success: boolean;
+      data: {
+        company_name?: string;
+        company_address?: string;
+        company_email?: string;
+        company_phone?: string;
+        company_logo?: string;
+      };
+    }>("/invoices/report/company-profile"),
+
   previewInvoice: async (id: string): Promise<string> => {
     const headers: Record<string, string> = {};
     if (authToken) {

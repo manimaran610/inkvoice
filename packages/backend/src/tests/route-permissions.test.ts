@@ -197,6 +197,26 @@ describe("a Viewer cannot alter money records", () => {
 
 describe("roles that may write", () => {
   test("an Accountant runs the books but leaves templates, tax rates and reminders alone", async () => {
+    getDb().run(
+      "INSERT OR REPLACE INTO settings (key, value) VALUES ('company_name', 'Inkvoice Co')",
+    );
+    getDb().run(
+      "INSERT OR REPLACE INTO settings (key, value) VALUES ('company_logo', 'data:image/png;base64,logo')",
+    );
+    const companyProfile = await call(
+      token.accountant,
+      "GET",
+      "/api/v1/invoices/report/company-profile",
+    );
+    expect(companyProfile.status).toBe(200);
+    expect(await companyProfile.json()).toMatchObject({
+      success: true,
+      data: {
+        company_name: "Inkvoice Co",
+        company_logo: "data:image/png;base64,logo",
+      },
+    });
+
     const customer = await call(token.accountant, "POST", "/api/v1/customers", { name: "Globex" });
     expect(customer.status).toBe(201);
     const { data } = (await customer.json()) as { data: { id: string } };

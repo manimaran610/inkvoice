@@ -40,7 +40,6 @@ import { formatApiError } from "@/lib/format-api-error";
 import { consumeRowHighlight } from "@/lib/highlight-row";
 import { isRecordId } from "@/lib/record-id";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { useSettingsStore } from "@/stores/settings.store";
 import reportTemplate from "@/templates/invoice-report.html?raw";
 
 const InvoiceForm = lazy(() => import("@/pages/InvoiceForm"));
@@ -68,8 +67,6 @@ const INVOICE_LIST_SEGMENTS = new Set([
 
 export default function Invoices() {
   const { t } = useTranslation();
-  const companySettings = useSettingsStore((state) => state.settings);
-  const companyName = companySettings.company_name || "";
   const [invoices, setInvoices] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -219,7 +216,10 @@ export default function Invoices() {
       if (dateRange.from) filters.from = dateRange.from;
       if (dateRange.to) filters.to = dateRange.to;
 
-      const firstPage = await api.listInvoices({ ...filters, page: "1", limit: "100" });
+      const [firstPage, companyProfile] = await Promise.all([
+        api.listInvoices({ ...filters, page: "1", limit: "100" }),
+        api.getInvoiceReportCompanyProfile(),
+      ]);
       const allInvoices = [...firstPage.data.items];
       const pageCount = Math.ceil(firstPage.data.total / 100);
       for (let reportPage = 2; reportPage <= pageCount; reportPage += 1) {
@@ -230,7 +230,7 @@ export default function Invoices() {
         });
         allInvoices.push(...res.data.items);
       }
-      printReport(allInvoices);
+      printReport(allInvoices, companyProfile.data);
     } catch (err: unknown) {
       toast.error(formatApiError(err, t));
     } finally {
@@ -238,7 +238,16 @@ export default function Invoices() {
     }
   };
 
-  const printReport = (reportInvoices: any[]) => {
+  const printReport = (
+    reportInvoices: any[],
+    companyProfile: {
+      company_name?: string;
+      company_address?: string;
+      company_email?: string;
+      company_phone?: string;
+      company_logo?: string;
+    },
+  ) => {
     const escapeHtml = (value: string) =>
       value.replace(
         /[&<>"']/g,
@@ -270,14 +279,15 @@ export default function Invoices() {
     const totals = Object.entries(reportTotals)
       .map(([currency, amount]) => `<div>${escapeHtml(formatCurrency(amount, currency))}</div>`)
       .join("");
+    const companyName = companyProfile.company_name || "";
     const companyDetails = [
-      companySettings.company_address,
-      [companySettings.company_email, companySettings.company_phone].filter(Boolean).join(" · "),
+      companyProfile.company_address,
+      [companyProfile.company_email, companyProfile.company_phone].filter(Boolean).join(" · "),
     ]
       .filter(Boolean)
       .join("\n");
-    const logo = companySettings.company_logo
-      ? `<img class="logo" src="${escapeHtml(companySettings.company_logo)}" alt="${escapeHtml(companyName || "Inkvoice")}" />`
+    const logo = companyProfile.company_logo
+      ? `<img class="logo" src="${escapeHtml(companyProfile.company_logo)}" alt="${escapeHtml(companyName || "Inkvoice")}" />`
       : "";
     const replacements: Record<string, string> = {
       report_title: escapeHtml(t("invoices.generate_report")),
